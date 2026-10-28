@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# PyInstaller
+build/
+dist/
+release/
+release-v*/
+*.spec
+
+# Local runtime data
+data/
+logs/
+*.log
+config.json
+
+# Editor / OS
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
+
+# Archives
+*.zip
