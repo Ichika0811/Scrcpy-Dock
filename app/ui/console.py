@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..parsers import clean_line
+from .icons import set_button_icon, ui_pixmap
 from .resources import app_pixmap
 
 
@@ -439,11 +440,15 @@ class TerminalPanel(QWidget):
         self.status_pill.setProperty("state", "idle")
         header_layout.addWidget(self.status_pill, 0, Qt.AlignmentFlag.AlignVCenter)
 
-        self.copy_button = self._make_action("⧉", "copy", "复制当前命令")
-        self.clear_button = self._make_action("⌫", "clear", "清空终端输出")
-        self.log_button = self._make_action("≡", "log", "打开终端日志")
-        self.stop_button = self._make_action("■", "stop", "停止当前投屏", danger=True)
-        self.reconnect_button = self._make_action("▶", "reconnect", "重新连接当前设备")
+        self.copy_button = self._make_action("copy", "copy", "复制当前命令")
+        self.clear_button = self._make_action("clear", "clear", "清空终端输出")
+        self.log_button = self._make_action("log", "log", "打开终端日志")
+        self.stop_button = self._make_action(
+            "stop", "stop", "停止当前投屏", danger=True
+        )
+        self.reconnect_button = self._make_action(
+            "play", "reconnect", "重新连接当前设备"
+        )
         header_layout.addWidget(self.copy_button)
         header_layout.addWidget(self.clear_button)
         header_layout.addWidget(self.log_button)
@@ -474,8 +479,10 @@ class TerminalPanel(QWidget):
         self.error_banner.setObjectName("ErrorBanner")
         error_layout = QHBoxLayout(self.error_banner)
         error_layout.setContentsMargins(9, 6, 9, 6)
-        self.error_icon = QLabel("⚠")
+        self.error_icon = QLabel()
         self.error_icon.setObjectName("ErrorText")
+        self.error_icon.setPixmap(ui_pixmap("warning", 16))
+        self.error_icon.setFixedSize(16, 16)
         self.error_text = QLabel("")
         self.error_text.setObjectName("ErrorText")
         self.error_text.setWordWrap(True)
@@ -516,12 +523,14 @@ class TerminalPanel(QWidget):
         self.command_text.clear_requested.connect(
             lambda: self.action_requested.emit(self.terminal_id, "clear")
         )
-        command_send = QPushButton("▶")
+        command_send = QPushButton("")
         command_send.setProperty("kind", "favorite")
+        set_button_icon(command_send, "send", 18)
         command_send.setToolTip("运行命令（Enter）")
         command_send.clicked.connect(self.command_text.submit)
-        command_copy = QPushButton("⧉")
+        command_copy = QPushButton("")
         command_copy.setProperty("kind", "favorite")
+        set_button_icon(command_copy, "copy", 18)
         command_copy.setToolTip("复制上次投屏命令")
         command_copy.clicked.connect(lambda: self.action_requested.emit(self.terminal_id, "copy"))
         command_layout.addWidget(prompt)
@@ -591,10 +600,11 @@ class TerminalPanel(QWidget):
             self.console.copy()
 
     def _make_action(
-        self, text: str, action: str, tooltip: str, *, danger: bool = False
+        self, icon: str, action: str, tooltip: str, *, danger: bool = False
     ) -> QPushButton:
-        button = QPushButton(text)
+        button = QPushButton("")
         button.setProperty("kind", "termDanger" if danger else "term")
+        set_button_icon(button, icon, 18)
         button.setFixedSize(27, 27)
         button.setToolTip(tooltip)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -678,22 +688,22 @@ class TerminalPanel(QWidget):
         self._has_networks = has_networks
         self._has_connectable = has_connectable
         if not has_tools:
-            self.idle_primary.setText("＋ 添加 scrcpy 版本")
+            self.idle_primary.setText("添加 scrcpy 版本")
             self.idle_primary.setVisible(True)
             self.idle_secondary.setText("添加设备 IP")
             self.idle_secondary.setVisible(False)
         elif not has_networks:
-            self.idle_primary.setText("＋ 添加设备 IP")
+            self.idle_primary.setText("添加设备 IP")
             self.idle_primary.setVisible(True)
             self.idle_secondary.setText("添加 scrcpy 版本")
             self.idle_secondary.setVisible(True)
         elif has_connectable:
-            self.idle_primary.setText("▶ 连接第一个端口")
+            self.idle_primary.setText("连接第一个端口")
             self.idle_primary.setVisible(True)
             self.idle_secondary.setText("添加 scrcpy 版本")
             self.idle_secondary.setVisible(True)
         else:
-            self.idle_primary.setText("⟳ 去右侧扫描端口")
+            self.idle_primary.setText("去右侧扫描端口")
             self.idle_primary.setVisible(True)
             self.idle_secondary.setText("添加 scrcpy 版本")
             self.idle_secondary.setVisible(True)

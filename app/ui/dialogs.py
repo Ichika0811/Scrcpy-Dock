@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QTimer, Qt, Signal
@@ -26,6 +27,7 @@ from PySide6.QtWidgets import (
 
 from ..parsers import is_valid_host, is_valid_port
 from .native import apply_dark_titlebar
+from .icons import ui_pixmap
 from .resources import app_pixmap
 
 
@@ -181,8 +183,9 @@ def inline_note(text: str) -> QFrame:
     frame.setObjectName("InlineNote")
     layout = QHBoxLayout(frame)
     layout.setContentsMargins(8, 6, 8, 6)
-    icon = _label("ⓘ", "InlineNoteText")
-    icon.setStyleSheet("color:#5b8d85; font-size:12px;")
+    icon = QLabel()
+    icon.setPixmap(ui_pixmap("info", 16))
+    icon.setFixedSize(16, 16)
     layout.addWidget(icon, 0, Qt.AlignmentFlag.AlignTop)
     layout.addWidget(_label(text, "InlineNoteText", wrap=True), 1)
     return frame
@@ -210,7 +213,10 @@ class ConfirmDialog(AppDialog):
         icon.setProperty("danger", "true" if danger else "false")
         icon_layout = QHBoxLayout(icon)
         icon_layout.setContentsMargins(0, 0, 0, 0)
-        icon_layout.addWidget(_label("⚠" if danger else "ⓘ"), 0, Qt.AlignmentFlag.AlignCenter)
+        icon_label = QLabel()
+        icon_label.setPixmap(ui_pixmap("warning" if danger else "info", 20))
+        icon_label.setFixedSize(20, 20)
+        icon_layout.addWidget(icon_label, 0, Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(icon, 0, Qt.AlignmentFlag.AlignTop)
         copy = QVBoxLayout()
         copy.setSpacing(4)
@@ -426,16 +432,16 @@ class ToolSettingsDialog(AppDialog):
         layout.addWidget(stats)
         buttons = QHBoxLayout()
         buttons.setSpacing(6)
-        add = QPushButton("＋ 单个添加")
+        add = QPushButton("单个添加")
         add.setProperty("kind", "ghost")
         add.clicked.connect(self.add_requested.emit)
-        batch = QPushButton("▣ 批量扫描父文件夹")
+        batch = QPushButton("批量扫描父文件夹")
         batch.setProperty("kind", "ghost")
         batch.clicked.connect(self.batch_requested.emit)
-        rescan = QPushButton("⟳ 重新检测全部")
+        rescan = QPushButton("重新检测全部")
         rescan.setProperty("kind", "ghost")
         rescan.clicked.connect(self.rescan_requested.emit)
-        edit_version = QPushButton("✎ 修改当前版本")
+        edit_version = QPushButton("修改当前版本")
         edit_version.setProperty("kind", "ghost")
         edit_version.clicked.connect(self.edit_version_requested.emit)
         buttons.addWidget(add)
@@ -567,13 +573,13 @@ class NetworkSettingsDialog(AppDialog):
         layout3.addWidget(form_field("输出缓冲", self.max_lines))
         links = QHBoxLayout()
         links.setSpacing(5)
-        data_button = QPushButton("▣ 数据目录")
+        data_button = QPushButton("数据目录")
         data_button.setProperty("kind", "ghost")
         data_button.clicked.connect(self.open_data_requested.emit)
-        logs_button = QPushButton("▤ 日志目录")
+        logs_button = QPushButton("日志目录")
         logs_button.setProperty("kind", "ghost")
         logs_button.clicked.connect(self.open_logs_requested.emit)
-        refresh_button = QPushButton("⟳ 刷新设备名")
+        refresh_button = QPushButton("刷新设备名")
         refresh_button.setProperty("kind", "ghost")
         refresh_button.clicked.connect(self.refresh_requested.emit)
         links.addWidget(data_button)
@@ -728,21 +734,21 @@ class AboutDialog(AppDialog):
         data_layout.addWidget(self._row("配置文件", info.get("config_path", ""), mono=True, wrap=True))
         links = QHBoxLayout()
         links.setSpacing(6)
-        data_button = QPushButton("▣ 打开数据目录")
+        data_button = QPushButton("打开数据目录")
         data_button.setProperty("kind", "ghost")
         data_button.clicked.connect(on_open_data)
-        log_button = QPushButton("▤ 打开日志目录")
+        log_button = QPushButton("打开日志目录")
         log_button.setProperty("kind", "ghost")
         log_button.clicked.connect(on_open_logs)
-        copy_button = QPushButton("⧉ 复制诊断信息")
+        copy_button = QPushButton("复制诊断信息")
         copy_button.setProperty("kind", "ghost")
 
         def copy_diagnostics() -> None:
             on_copy()
-            copy_button.setText("✓ 已复制")
+            copy_button.setText("已复制")
             reset = QTimer(copy_button)
             reset.setSingleShot(True)
-            reset.timeout.connect(lambda: copy_button.setText("⧉ 复制诊断信息"))
+            reset.timeout.connect(lambda: copy_button.setText("复制诊断信息"))
             reset.start(1800)
 
         copy_button.clicked.connect(copy_diagnostics)
@@ -780,4 +786,86 @@ class AboutDialog(AppDialog):
         text.setWordWrap(wrap)
         layout.addWidget(text, 1)
         return row
+
+
+class DownloadReleaseDialog(AppDialog):
+    """Pick an official scrcpy Windows release and an install directory."""
+
+    def __init__(
+        self,
+        releases: list[dict[str, Any]],
+        default_dir: str,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(
+            "下载 scrcpy 版本",
+            "从 Genymobile/scrcpy 官方 GitHub Releases 下载 Windows 版本。",
+            width=640,
+            parent=parent,
+        )
+        self._releases = releases
+        group, layout = group_box("选择版本")
+        self.release_combo = QComboBox()
+        for release in releases:
+            published = str(release.get("published") or "")[:10]
+            size = int(release.get("asset_size") or 0) / (1024 * 1024)
+            label = f"{release.get('tag', '')}  ·  {published}  ·  {size:.1f} MB"
+            self.release_combo.addItem(label, release)
+        layout.addWidget(
+            form_field(
+                "scrcpy 版本",
+                self.release_combo,
+                "只列出官方稳定版 Windows zip。下载完成后会自动加入左侧版本库。",
+            )
+        )
+        layout.addWidget(
+            _label(
+                f"共 {len(releases)} 个可用版本。GitHub 下载速度取决于当前网络。",
+                "FormHelp",
+                wrap=True,
+            )
+        )
+        self.body_layout.addWidget(group)
+
+        install_group, install_layout = group_box("安装位置")
+        dir_row = QWidget()
+        dir_layout = QHBoxLayout(dir_row)
+        dir_layout.setContentsMargins(0, 0, 0, 0)
+        dir_layout.setSpacing(5)
+        self.directory = QLineEdit(default_dir)
+        self.directory.setProperty("mono", "true")
+        browse = QPushButton("浏览")
+        browse.setProperty("kind", "ghost")
+        browse.clicked.connect(self._browse)
+        dir_layout.addWidget(self.directory, 1)
+        dir_layout.addWidget(browse)
+        install_layout.addWidget(
+            form_field(
+                "下载到",
+                dir_row,
+                "每个版本会解压到独立文件夹，不会覆盖已有版本。",
+            )
+        )
+        self.body_layout.addWidget(install_group)
+        self.add_footer_button("取消", slot=self.reject)
+        download = self.add_footer_button(
+            "下载并添加", kind="primary", slot=self.accept
+        )
+        download.setEnabled(bool(releases))
+
+    def _browse(self) -> None:
+        selected = QFileDialog.getExistingDirectory(
+            self,
+            "选择 scrcpy 版本安装文件夹",
+            self.directory.text().strip() or str(Path.home()),
+        )
+        if selected:
+            self.directory.setText(selected)
+
+    def values(self) -> dict[str, Any]:
+        return {
+            "release": self.release_combo.currentData(),
+            "directory": self.directory.text().strip(),
+        }
+
 

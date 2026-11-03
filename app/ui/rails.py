@@ -16,6 +16,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .icons import set_button_icon, ui_pixmap
+
 SOURCE_LABELS = {
     "scan": "扫描发现",
     "connect": "已连接",
@@ -149,8 +151,10 @@ class ToolCard(QFrame):
         copy.addWidget(path)
         top.addLayout(copy, 1)
 
-        self.favorite_button = QPushButton("★" if tool.get("favorite") else "☆")
+        self.favorite_button = QPushButton("")
         self.favorite_button.setProperty("kind", "favorite")
+        favorite_icon = "star-filled" if tool.get("favorite") else "star"
+        set_button_icon(self.favorite_button, favorite_icon, 18)
         self.favorite_button.setProperty("favorite", "true" if tool.get("favorite") else "false")
         self.favorite_button.setToolTip("取消收藏" if tool.get("favorite") else "收藏")
         self.favorite_button.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -181,6 +185,10 @@ class ToolCard(QFrame):
         if event.button() == Qt.MouseButton.LeftButton:
             self.selected.emit(self.tool["id"])
         super().mouseReleaseEvent(event)
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        super().showEvent(event)
+        self.favorite_button.raise_()
 
     def keyPressEvent(self, event: Any) -> None:
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
@@ -267,7 +275,10 @@ class PortRow(QFrame):
         copy.addWidget(make_label(source, object_name="PortSource"))
         layout.addLayout(copy, 1)
 
-        arrow = make_label("›", object_name="PortArrow")
+        arrow = QLabel()
+        arrow.setObjectName("PortArrow")
+        arrow.setPixmap(ui_pixmap("chevron-right", 12))
+        arrow.setFixedSize(12, 12)
         layout.addWidget(arrow, 0, Qt.AlignmentFlag.AlignVCenter)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
@@ -323,8 +334,12 @@ class NetworkCard(QFrame):
         header_layout.setContentsMargins(8, 8, 7, 7)
         header_layout.setSpacing(7)
 
-        chevron = make_label("⌄" if expanded else "›", object_name="Chevron")
-        chevron.setFixedWidth(12)
+        chevron = QLabel()
+        chevron.setObjectName("Chevron")
+        chevron.setPixmap(
+            ui_pixmap("chevron-down" if expanded else "chevron-right", 12)
+        )
+        chevron.setFixedSize(12, 12)
         header_layout.addWidget(chevron, 0, Qt.AlignmentFlag.AlignTop)
 
         copy = QVBoxLayout()
@@ -396,19 +411,19 @@ class NetworkCard(QFrame):
             actions = QHBoxLayout()
             actions.setContentsMargins(0, 3, 0, 0)
             actions.setSpacing(4)
-            full_scan_button = QPushButton("◉ 全端口" if not scanning else "◌ 正在扫描…")
+            full_scan_button = QPushButton("全端口" if not scanning else "◌ 正在扫描…")
             full_scan_button.setProperty("kind", "link")
             full_scan_button.setEnabled(not scanning)
             full_scan_button.setToolTip("扫描 1–65535，并验证 ADB 端口；需要几十秒")
             full_scan_button.clicked.connect(lambda: self.scan_requested.emit(self.network["id"]))
-            quick_button = QPushButton("⟳ 快速")
+            quick_button = QPushButton("快速")
             quick_button.setProperty("kind", "link")
             quick_button.setEnabled(not scanning)
             quick_button.setToolTip("只扫描设置的常用端口范围")
             quick_button.clicked.connect(
                 lambda: self.quick_scan_requested.emit(self.network["id"])
             )
-            add_port = QPushButton("＋ 手动端口")
+            add_port = QPushButton("手动端口")
             add_port.setProperty("kind", "link")
             add_port.clicked.connect(lambda: self.add_port_requested.emit(self.network["id"]))
             actions.addWidget(full_scan_button)

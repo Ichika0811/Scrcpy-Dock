@@ -19,41 +19,41 @@ APP_QSS = r"""
     outline: none;
 }
 QMainWindow, QWidget#Root {
-    background: #070b12;
+    background-color: #070b12;
 }
 QWidget#TitleStrip {
-    background: #080d15;
+    background-color: #080d15;
 }
 QWidget#Workspace {
     background: qradialgradient(cx:0.2, cy:-0.1, radius:1.2, fx:0.2, fy:-0.1,
         stop:0 rgba(45, 212, 191, 26), stop:0.36 rgba(7, 11, 18, 0), stop:1 #070b12);
 }
 QWidget#RailLeft {
-    background: #0a1019;
+    background-color: #0a1019;
     border-right: 1px solid rgba(148, 163, 184, 24);
 }
 QWidget#RailRight {
-    background: #0b121c;
+    background-color: #0b121c;
     border-left: 1px solid rgba(148, 163, 184, 24);
 }
 QWidget#RailHeader {
-    background: transparent;
+    background-color: transparent;
     border-bottom: 1px solid rgba(148, 163, 184, 18);
 }
 QWidget#RailCaption {
-    background: rgba(3, 7, 13, 28);
+    background-color: rgba(3, 7, 13, 28);
     border-bottom: 1px solid rgba(148, 163, 184, 16);
 }
 QWidget#RailFooter {
-    background: rgba(2, 6, 12, 30);
+    background-color: rgba(2, 6, 12, 30);
     border-top: 1px solid rgba(148, 163, 184, 18);
 }
 QScrollArea#RailScroll, QScrollArea#RailScroll > QWidget > QWidget {
-    background: transparent;
+    background-color: transparent;
     border: none;
 }
 QScrollArea#TerminalTabs, QScrollArea#TerminalTabs > QWidget > QWidget {
-    background: transparent;
+    background-color: transparent;
     border: none;
 }
 
@@ -115,7 +115,7 @@ QLabel[role="autoTag"] {
     border-radius: 3px;
     padding: 0 4px;
     font-size: 7px;
-    background: rgba(94, 234, 212, 12);
+    background-color: rgba(94, 234, 212, 12);
 }
 QLabel[role="customTag"] {
     color: #c5ab72;
@@ -123,7 +123,7 @@ QLabel[role="customTag"] {
     border-radius: 3px;
     padding: 0 4px;
     font-size: 7px;
-    background: rgba(251, 191, 36, 10);
+    background-color: rgba(251, 191, 36, 10);
 }
 QLabel[role="versionPill"] {
     color: #8bd7c9;
@@ -132,7 +132,7 @@ QLabel[role="versionPill"] {
     padding: 1px 6px;
     font-family: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
     font-size: 8px;
-    background: rgba(94, 234, 212, 10);
+    background-color: rgba(94, 234, 212, 10);
 }
 QLabel[role="countBadge"] {
     color: #728399;
@@ -141,7 +141,7 @@ QLabel[role="countBadge"] {
     padding: 0 4px;
     font-family: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
     font-size: 8px;
-    background: rgba(148, 163, 184, 8);
+    background-color: rgba(148, 163, 184, 8);
 }
 QLabel[role="statusText"] {
     font-size: 9px;
@@ -160,26 +160,26 @@ QLabel#StatusDot {
     min-height: 6px;
     max-height: 6px;
     border-radius: 3px;
-    background: #49596d;
+    background-color: #49596d;
 }
 QLabel#StatusDot[state="running"] {
-    background: #4ade80;
+    background-color: #4ade80;
 }
 QLabel#StatusDot[state="connecting"],
 QLabel#StatusDot[state="starting"],
 QLabel#StatusDot[state="stopping"] {
-    background: #fbbf24;
+    background-color: #fbbf24;
 }
-QLabel#StatusDot[state="failed"] { background: #fb7185; }
-QLabel#StatusDot[state="error"] { background: #fb7185; }
-QLabel#StatusDot[state="online"] { background: #4ade80; }
-QLabel#StatusDot[state="offline"] { background: #fbbf24; }
-QLabel#StatusDot[state="idle"] { background: #3f4e62; }
+QLabel#StatusDot[state="failed"] { background-color: #fb7185; }
+QLabel#StatusDot[state="error"] { background-color: #fb7185; }
+QLabel#StatusDot[state="online"] { background-color: #4ade80; }
+QLabel#StatusDot[state="offline"] { background-color: #fbbf24; }
+QLabel#StatusDot[state="idle"] { background-color: #3f4e62; }
 
 /* --------------------------------------------------------------- buttons */
 QPushButton {
     border: none;
-    background: transparent;
+    background-color: transparent;
     padding: 0;
     color: #8c9cb1;
 }
@@ -194,14 +194,14 @@ QPushButton[kind="icon"] {
     border: 1px solid rgba(148, 163, 184, 33);
     border-radius: 7px;
     color: #66778d;
-    background: rgba(148, 163, 184, 6);
+    background-color: rgba(148, 163, 184, 6);
     font-family: "Segoe UI Symbol", "Segoe UI", sans-serif;
     font-size: 14px;
 }
 QPushButton[kind="icon"]:hover {
     color: #e8f0f9;
     border-color: rgba(148, 163, 184, 60);
-    background: rgba(148, 163, 184, 18);
+    background-color: rgba(148, 163, 184, 18);
 }
 QPushButton[kind="add"] {
     min-width: 29px;
@@ -211,14 +211,14 @@ QPushButton[kind="add"] {
     border: 1px solid rgba(94, 234, 212, 42);
     border-radius: 7px;
     color: #5eead4;
-    background: rgba(94, 234, 212, 12);
+    background-color: rgba(94, 234, 212, 12);
     font-family: "Segoe UI Symbol", "Segoe UI", sans-serif;
     font-size: 18px;
 }
 QPushButton[kind="add"]:hover {
     color: #c0fff6;
     border-color: rgba(94, 234, 212, 90);
-    background: rgba(94, 234, 212, 26);
+    background-color: rgba(94, 234, 212, 26);
 }
 QPushButton[kind="primary"] {
     color: #04302a;
@@ -240,11 +240,11 @@ QPushButton[kind="ghost"] {
     padding: 0 10px;
     min-height: 29px;
     font-size: 9px;
-    background: rgba(148, 163, 184, 8);
+    background-color: rgba(148, 163, 184, 8);
 }
 QPushButton[kind="ghost"]:hover {
     border-color: rgba(148, 163, 184, 60);
-    background: rgba(148, 163, 184, 18);
+    background-color: rgba(148, 163, 184, 18);
 }
 QPushButton[kind="danger"] {
     color: #e8a3ad;
@@ -253,12 +253,12 @@ QPushButton[kind="danger"] {
     padding: 0 10px;
     min-height: 29px;
     font-size: 9px;
-    background: rgba(251, 113, 133, 15);
+    background-color: rgba(251, 113, 133, 15);
 }
 QPushButton[kind="danger"]:hover {
     color: #ffc2ca;
     border-color: rgba(251, 113, 133, 85);
-    background: rgba(251, 113, 133, 28);
+    background-color: rgba(251, 113, 133, 28);
 }
 QPushButton[kind="term"] {
     min-height: 27px;
@@ -266,19 +266,19 @@ QPushButton[kind="term"] {
     border-radius: 6px;
     padding: 0;
     color: #7f91a7;
-    background: rgba(148, 163, 184, 5);
+    background-color: rgba(148, 163, 184, 5);
     font-family: "Segoe UI Symbol", "Segoe UI", sans-serif;
     font-size: 13px;
 }
 QPushButton[kind="term"]:hover {
     color: #dbe6f2;
     border-color: rgba(148, 163, 184, 45);
-    background: rgba(148, 163, 184, 16);
+    background-color: rgba(148, 163, 184, 16);
 }
 QPushButton[kind="termDanger"]:hover {
     color: #ffb3bd;
     border-color: rgba(251, 113, 133, 42);
-    background: rgba(251, 113, 133, 18);
+    background-color: rgba(251, 113, 133, 18);
 }
 QPushButton[kind="favorite"] {
     min-width: 22px;
@@ -292,7 +292,7 @@ QPushButton[kind="favorite"] {
 }
 QPushButton[kind="favorite"]:hover {
     color: #fbbf24;
-    background: rgba(251, 191, 36, 14);
+    background-color: rgba(251, 191, 36, 14);
 }
 QPushButton[kind="favorite"][favorite="true"] {
     color: #fbbf24;
@@ -305,14 +305,14 @@ QPushButton[kind="tabAdd"] {
     border: 1px solid rgba(148, 163, 184, 30);
     border-radius: 7px;
     color: #7d8da3;
-    background: rgba(148, 163, 184, 8);
+    background-color: rgba(148, 163, 184, 8);
     font-family: "Segoe UI Symbol", "Segoe UI", sans-serif;
     font-size: 18px;
 }
 QPushButton[kind="tabAdd"]:hover {
     color: #5eead4;
     border-color: rgba(94, 234, 212, 50);
-    background: rgba(94, 234, 212, 12);
+    background-color: rgba(94, 234, 212, 12);
 }
 QPushButton[kind="link"] {
     color: #65778c;
@@ -329,12 +329,12 @@ QPushButton:disabled {
 
 /* ------------------------------------------------------------- tool cards */
 QFrame#ToolCard {
-    background: transparent;
+    background-color: transparent;
     border: 1px solid transparent;
     border-radius: 8px;
 }
 QFrame#ToolCard:hover {
-    background: rgba(148, 163, 184, 10);
+    background-color: rgba(148, 163, 184, 10);
     border-color: rgba(148, 163, 184, 20);
 }
 QFrame#ToolCard[active="true"] {
@@ -343,7 +343,7 @@ QFrame#ToolCard[active="true"] {
     border-color: rgba(94, 234, 212, 45);
 }
 QFrame#ToolCard[missing="true"] {
-    background: rgba(251, 113, 133, 6);
+    background-color: rgba(251, 113, 133, 6);
 }
 QLabel#ToolAdb {
     color: #4d5e72;
@@ -357,12 +357,12 @@ QLabel#CurrentMark {
 
 /* ---------------------------------------------------------- network cards */
 QFrame#NetworkCard {
-    background: transparent;
+    background-color: transparent;
     border: 1px solid transparent;
     border-radius: 8px;
 }
 QFrame#NetworkCard:hover {
-    background: rgba(148, 163, 184, 7);
+    background-color: rgba(148, 163, 184, 7);
     border-color: rgba(148, 163, 184, 18);
 }
 QFrame#NetworkCard[current="true"] {
@@ -371,7 +371,7 @@ QFrame#NetworkCard[current="true"] {
         stop:0 rgba(120, 169, 255, 16), stop:1 rgba(120, 169, 255, 2));
 }
 QFrame#NetworkHeader {
-    background: transparent;
+    background-color: transparent;
     border: none;
 }
 QLabel#NetworkName {
@@ -391,7 +391,7 @@ QLabel#PortCount {
     padding: 1px 5px;
     font-family: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
     font-size: 7px;
-    background: rgba(148, 163, 184, 7);
+    background-color: rgba(148, 163, 184, 7);
 }
 QLabel#Chevron {
     color: #46556a;
@@ -399,16 +399,16 @@ QLabel#Chevron {
     font-size: 10px;
 }
 QFrame#PortRow {
-    background: transparent;
+    background-color: transparent;
     border: 1px solid transparent;
     border-radius: 6px;
 }
 QFrame#PortRow:hover {
-    background: rgba(148, 163, 184, 12);
+    background-color: rgba(148, 163, 184, 12);
     border-color: rgba(148, 163, 184, 22);
 }
 QFrame#PortRow[active="true"] {
-    background: rgba(94, 234, 212, 10);
+    background-color: rgba(94, 234, 212, 10);
     border-color: rgba(94, 234, 212, 42);
 }
 QLabel#PortNumber {
@@ -436,10 +436,10 @@ QFrame#PortRow:hover QLabel#PortArrow {
 QFrame#NetworkEmpty {
     border: 1px dashed rgba(148, 163, 184, 25);
     border-radius: 6px;
-    background: transparent;
+    background-color: transparent;
 }
 QFrame#RailEmpty {
-    background: rgba(148, 163, 184, 6);
+    background-color: rgba(148, 163, 184, 6);
     border: 1px dashed rgba(148, 163, 184, 28);
     border-radius: 9px;
 }
@@ -464,7 +464,7 @@ QLabel#RailEmptyIcon {
     max-height: 38px;
     border-radius: 10px;
     color: #5eead4;
-    background: rgba(94, 234, 212, 13);
+    background-color: rgba(94, 234, 212, 13);
     font-family: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
     font-size: 15px;
 }
@@ -478,32 +478,32 @@ QLabel#RailEmptyText {
     font-size: 9px;
 }
 QFrame#AdbPill {
-    background: rgba(148, 163, 184, 7);
+    background-color: rgba(148, 163, 184, 7);
     border: 1px solid rgba(148, 163, 184, 22);
     border-radius: 7px;
 }
 QFrame#AdbPill:hover {
-    background: rgba(148, 163, 184, 14);
+    background-color: rgba(148, 163, 184, 14);
     border-color: rgba(148, 163, 184, 38);
 }
 
 /* ------------------------------------------------------------------ tabs */
 QWidget#TabBar {
-    background: rgba(7, 12, 19, 120);
+    background-color: rgba(7, 12, 19, 120);
     border-bottom: 1px solid rgba(148, 163, 184, 30);
 }
 QFrame#TerminalTab {
-    background: transparent;
+    background-color: transparent;
     border: 1px solid transparent;
     border-bottom: 0;
     border-top-left-radius: 7px;
     border-top-right-radius: 7px;
 }
 QFrame#TerminalTab:hover {
-    background: rgba(148, 163, 184, 9);
+    background-color: rgba(148, 163, 184, 9);
 }
 QFrame#TerminalTab[active="true"] {
-    background: #0b121c;
+    background-color: #0b121c;
     border-color: rgba(148, 163, 184, 34);
 }
 QLabel#TabVersion {
@@ -538,7 +538,7 @@ QFrame#TerminalTab[active="true"] QPushButton#TabClose {
 }
 QPushButton#TabClose:hover {
     color: #edf4fc;
-    background: rgba(148, 163, 184, 32);
+    background-color: rgba(148, 163, 184, 32);
 }
 
 /* ------------------------------------------------------------- terminal */
@@ -547,12 +547,12 @@ QWidget#TerminalWorkspace {
         stop:0 rgba(45, 212, 191, 12), stop:0.55 rgba(7, 11, 18, 0), stop:1 #080d15);
 }
 QFrame#TerminalShell {
-    background: #060a11;
+    background-color: #060a11;
     border: 1px solid rgba(148, 163, 184, 32);
     border-radius: 10px;
 }
 QFrame#TerminalHeader {
-    background: rgba(10, 16, 25, 210);
+    background-color: rgba(10, 16, 25, 210);
     border-bottom: 1px solid rgba(148, 163, 184, 22);
 }
 QLabel#TerminalIcon {
@@ -561,7 +561,7 @@ QLabel#TerminalIcon {
     min-height: 32px;
     max-height: 32px;
     border: none;
-    background: transparent;
+    background-color: transparent;
 }
 QLabel#TerminalTitle {
     color: #eef5fc;
@@ -587,29 +587,29 @@ QLabel#StatusPill {
 QLabel#StatusPill[state="running"] {
     color: #86dcb8;
     border-color: rgba(74, 222, 128, 28);
-    background: rgba(74, 222, 128, 9);
+    background-color: rgba(74, 222, 128, 9);
 }
 QLabel#StatusPill[state="connecting"],
 QLabel#StatusPill[state="starting"],
 QLabel#StatusPill[state="stopping"] {
     color: #dbbe7c;
     border-color: rgba(251, 191, 36, 30);
-    background: rgba(251, 191, 36, 10);
+    background-color: rgba(251, 191, 36, 10);
 }
 QLabel#StatusPill[state="failed"] {
     color: #e99ba6;
     border-color: rgba(251, 113, 133, 32);
-    background: rgba(251, 113, 133, 11);
+    background-color: rgba(251, 113, 133, 11);
 }
 QTextEdit#Console {
-    background: #060a11;
+    background-color: #060a11;
     border: none;
     padding: 8px 13px 18px 13px;
     selection-background-color: #1d6155;
     selection-color: #f2fffd;
 }
 QFrame#CommandBar {
-    background: rgba(3, 7, 13, 80);
+    background-color: rgba(3, 7, 13, 80);
     border-top: 1px solid rgba(148, 163, 184, 20);
 }
 QLabel#CommandPrompt {
@@ -619,7 +619,7 @@ QLabel#CommandPrompt {
 }
 QLineEdit#CommandText {
     border: none;
-    background: transparent;
+    background-color: transparent;
     color: #d7e3f1;
     font-family: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
     font-size: 9px;
@@ -633,7 +633,7 @@ QLineEdit#CommandText::placeholder {
     color: #38485c;
 }
 QFrame#TerminalFooter {
-    background: rgba(3, 7, 13, 78);
+    background-color: rgba(3, 7, 13, 78);
     border-top: 1px solid rgba(148, 163, 184, 18);
 }
 QLabel#TerminalFooterText {
@@ -642,7 +642,7 @@ QLabel#TerminalFooterText {
     font-size: 7px;
 }
 QFrame#IdlePanel {
-    background: transparent;
+    background-color: transparent;
 }
 QLabel#IdleIcon {
     min-width: 62px;
@@ -650,7 +650,7 @@ QLabel#IdleIcon {
     min-height: 62px;
     max-height: 62px;
     border: none;
-    background: transparent;
+    background-color: transparent;
 }
 QLabel#IdleTitle {
     color: #eef5fc;
@@ -662,7 +662,7 @@ QLabel#IdleText {
     font-size: 10px;
 }
 QFrame#IdleStep {
-    background: rgba(148, 163, 184, 5);
+    background-color: rgba(148, 163, 184, 5);
     border: 1px solid rgba(148, 163, 184, 24);
     border-radius: 7px;
 }
@@ -682,7 +682,7 @@ QLabel#IdleStepText {
     font-size: 8px;
 }
 QFrame#ErrorBanner {
-    background: rgba(251, 113, 133, 14);
+    background-color: rgba(251, 113, 133, 14);
     border: 1px solid rgba(251, 113, 133, 35);
     border-radius: 5px;
 }
@@ -691,7 +691,7 @@ QLabel#ErrorText {
     font-size: 9px;
 }
 QFrame#ProgressBanner {
-    background: rgba(251, 191, 36, 12);
+    background-color: rgba(251, 191, 36, 12);
     border: 1px solid rgba(251, 191, 36, 30);
     border-radius: 5px;
 }
@@ -702,7 +702,7 @@ QLabel#ProgressText {
 
 /* ------------------------------------------------------------------ toast */
 QFrame#Toast {
-    background: rgba(16, 24, 36, 248);
+    background-color: rgba(16, 24, 36, 248);
     border: 1px solid rgba(148, 163, 184, 60);
     border-radius: 8px;
 }
@@ -731,29 +731,29 @@ QLabel#ToastIcon {
     max-height: 22px;
     border-radius: 5px;
     color: #5eead4;
-    background: rgba(94, 234, 212, 14);
+    background-color: rgba(94, 234, 212, 14);
     font-family: "Segoe UI Symbol", "Segoe UI", sans-serif;
     font-size: 13px;
 }
 QFrame#Toast[kind="error"] QLabel#ToastIcon {
     color: #fb7185;
-    background: rgba(251, 113, 133, 18);
+    background-color: rgba(251, 113, 133, 18);
 }
 QFrame#Toast[kind="warning"] QLabel#ToastIcon {
     color: #fbbf24;
-    background: rgba(251, 191, 36, 16);
+    background-color: rgba(251, 191, 36, 16);
 }
 QFrame#Toast[kind="success"] QLabel#ToastIcon {
     color: #4ade80;
-    background: rgba(74, 222, 128, 14);
+    background-color: rgba(74, 222, 128, 14);
 }
 
 /* --------------------------------------------------------------- dialogs */
 QDialog#AppDialog {
-    background: #0f1723;
+    background-color: #0f1723;
 }
 QWidget#DialogHeader {
-    background: transparent;
+    background-color: transparent;
     border-bottom: 1px solid rgba(148, 163, 184, 20);
 }
 QLabel#DialogTitle {
@@ -766,14 +766,14 @@ QLabel#DialogDescription {
     font-size: 9px;
 }
 QWidget#DialogBody {
-    background: transparent;
+    background-color: transparent;
 }
 QScrollArea#DialogScroll, QScrollArea#DialogScroll > QWidget > QWidget {
-    background: transparent;
+    background-color: transparent;
     border: none;
 }
 QFrame#DialogFooter {
-    background: rgba(2, 6, 11, 40);
+    background-color: rgba(2, 6, 11, 40);
     border-top: 1px solid rgba(148, 163, 184, 20);
 }
 QLabel#FieldLabel {
@@ -782,7 +782,7 @@ QLabel#FieldLabel {
     font-weight: 500;
 }
 QLineEdit, QSpinBox, QComboBox, QTextEdit {
-    background: rgba(4, 9, 15, 160);
+    background-color: rgba(4, 9, 15, 160);
     border: 1px solid rgba(148, 163, 184, 35);
     border-radius: 6px;
     padding: 0 9px;
@@ -803,21 +803,21 @@ QLineEdit:hover, QSpinBox:hover, QComboBox:hover, QTextEdit:hover {
 }
 QLineEdit:focus, QSpinBox:focus, QComboBox:focus, QTextEdit:focus {
     border-color: rgba(94, 234, 212, 100);
-    background: rgba(4, 9, 15, 220);
+    background-color: rgba(4, 9, 15, 220);
 }
 QLineEdit[mono="true"] {
     font-family: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
 }
 QLineEdit:disabled {
     color: #526176;
-    background: rgba(4, 9, 15, 90);
+    background-color: rgba(4, 9, 15, 90);
 }
 QComboBox::drop-down {
     border: none;
     width: 20px;
 }
 QComboBox QAbstractItemView {
-    background: #111b28;
+    background-color: #111b28;
     border: 1px solid rgba(148, 163, 184, 55);
     selection-background-color: rgba(94, 234, 212, 25);
     selection-color: #eaf1fa;
@@ -826,7 +826,7 @@ QComboBox QAbstractItemView {
 QSpinBox::up-button, QSpinBox::down-button {
     width: 16px;
     border: none;
-    background: rgba(148, 163, 184, 12);
+    background-color: rgba(148, 163, 184, 12);
 }
 QCheckBox {
     color: #a6b4c6;
@@ -838,14 +838,14 @@ QCheckBox::indicator {
     height: 13px;
     border: 1px solid rgba(148, 163, 184, 55);
     border-radius: 3px;
-    background: rgba(4, 9, 15, 180);
+    background-color: rgba(4, 9, 15, 180);
 }
 QCheckBox::indicator:checked {
-    background: #5eead4;
+    background-color: #5eead4;
     border-color: #5eead4;
 }
 QFrame#SettingsGroup {
-    background: rgba(148, 163, 184, 5);
+    background-color: rgba(148, 163, 184, 5);
     border: 1px solid rgba(148, 163, 184, 20);
     border-radius: 8px;
 }
@@ -859,7 +859,7 @@ QLabel#FormHelp {
     font-size: 8px;
 }
 QFrame#InlineNote {
-    background: rgba(148, 163, 184, 7);
+    background-color: rgba(148, 163, 184, 7);
     border: 1px solid rgba(148, 163, 184, 22);
     border-radius: 6px;
 }
@@ -869,7 +869,7 @@ QLabel#InlineNoteText {
 }
 QLabel#ModalError {
     color: #e49aa4;
-    background: rgba(251, 113, 133, 14);
+    background-color: rgba(251, 113, 133, 14);
     border: 1px solid rgba(251, 113, 133, 38);
     border-radius: 6px;
     padding: 6px 8px;
@@ -882,13 +882,13 @@ QFrame#ConfirmIcon {
     max-height: 34px;
     border-radius: 8px;
     color: #fbbf24;
-    background: rgba(251, 191, 36, 16);
+    background-color: rgba(251, 191, 36, 16);
     font-family: "Segoe UI Symbol", "Segoe UI", sans-serif;
     font-size: 16px;
 }
 QFrame#ConfirmIcon[danger="true"] {
     color: #fb7185;
-    background: rgba(251, 113, 133, 18);
+    background-color: rgba(251, 113, 133, 18);
 }
 QLabel#ConfirmTitle {
     color: #eaf1fa;
@@ -917,7 +917,7 @@ QLabel#AboutSubtitle {
 
 /* ------------------------------------------------------------------- menu */
 QMenu {
-    background: #101925;
+    background-color: #101925;
     border: 1px solid rgba(148, 163, 184, 60);
     border-radius: 6px;
     padding: 4px;
@@ -930,65 +930,126 @@ QMenu::item {
 }
 QMenu::item:selected {
     color: #eaf1fa;
-    background: rgba(148, 163, 184, 22);
+    background-color: rgba(148, 163, 184, 22);
 }
 QMenu::item:disabled {
     color: #455365;
 }
 QMenu::separator {
     height: 1px;
-    background: rgba(148, 163, 184, 22);
+    background-color: rgba(148, 163, 184, 22);
     margin: 4px 8px;
 }
 QProgressBar {
-    background: rgba(148, 163, 184, 20);
+    background-color: rgba(148, 163, 184, 20);
     border: none;
     border-radius: 2px;
 }
 QProgressBar::chunk {
-    background: #5eead4;
+    background-color: #5eead4;
     border-radius: 2px;
 }
 
 /* ---------------------------------------------------------------- scroll */
 QScrollBar:vertical {
     width: 8px;
-    background: transparent;
+    background-color: transparent;
     margin: 2px;
 }
 QScrollBar::handle:vertical {
-    background: rgba(148, 163, 184, 45);
+    background-color: rgba(148, 163, 184, 45);
     border-radius: 4px;
     min-height: 24px;
 }
 QScrollBar::handle:vertical:hover {
-    background: rgba(148, 163, 184, 80);
+    background-color: rgba(148, 163, 184, 80);
 }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
-    background: transparent;
+    background-color: transparent;
     height: 0;
 }
 QScrollBar:horizontal {
     height: 8px;
-    background: transparent;
+    background-color: transparent;
     margin: 2px;
 }
 QScrollBar::handle:horizontal {
-    background: rgba(148, 163, 184, 45);
+    background-color: rgba(148, 163, 184, 45);
     border-radius: 4px;
     min-width: 24px;
 }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal,
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
-    background: transparent;
+    background-color: transparent;
     width: 0;
 }
 QToolTip {
-    background: #101925;
+    background-color: #101925;
     color: #c9d5e3;
     border: 1px solid rgba(148, 163, 184, 60);
     padding: 5px 7px;
     font-size: 9px;
 }
 """
+
+# QSS-referenced vector icons. The path is filled in below so the stylesheet
+# works both from source and from the PyInstaller onedir layout.
+_ICON_RULES = """
+QPushButton[cssicon="settings"] { background-image: url("__ICON_DIR__/settings.svg"); }
+QPushButton[cssicon="download"] { background-image: url("__ICON_DIR__/download.svg"); }
+QPushButton[cssicon="plus"] { background-image: url("__ICON_DIR__/plus.svg"); }
+QPushButton[cssicon="star"] { background-image: url("__ICON_DIR__/star.svg"); }
+QPushButton[cssicon="star-filled"] { background-image: url("__ICON_DIR__/star-filled.svg"); }
+QPushButton[cssicon="copy"] { background-image: url("__ICON_DIR__/copy.svg"); }
+QPushButton[cssicon="clear"] { background-image: url("__ICON_DIR__/clear.svg"); }
+QPushButton[cssicon="log"] { background-image: url("__ICON_DIR__/log.svg"); }
+QPushButton[cssicon="stop"] { background-image: url("__ICON_DIR__/stop.svg"); }
+QPushButton[cssicon="play"] { background-image: url("__ICON_DIR__/play.svg"); }
+QPushButton[cssicon="close"] { background-image: url("__ICON_DIR__/close.svg"); }
+QPushButton[cssicon="send"] { background-image: url("__ICON_DIR__/send.svg"); }
+QPushButton[cssicon="refresh"] { background-image: url("__ICON_DIR__/refresh.svg"); }
+QPushButton[cssicon="folder"] { background-image: url("__ICON_DIR__/folder.svg"); }
+QLabel[cssicon="chevron-down"] { image: url("__ICON_DIR__/chevron-down.svg"); }
+QLabel[cssicon="chevron-right"] { image: url("__ICON_DIR__/chevron-right.svg"); }
+QLabel[cssicon="arrow-right"] { image: url("__ICON_DIR__/arrow-right.svg"); }
+QLabel[cssicon="scan"] { image: url("__ICON_DIR__/scan.svg"); }
+QLabel[cssicon="info"] { image: url("__ICON_DIR__/info.svg"); }
+QLabel[cssicon="warning"] { image: url("__ICON_DIR__/warning.svg"); }
+QLabel[cssicon="check"] { image: url("__ICON_DIR__/check.svg"); }
+QPushButton[cssicon="settings"]:hover { background-image: url("__ICON_DIR__/settings.svg"); }
+QPushButton[cssicon="download"]:hover { background-image: url("__ICON_DIR__/download.svg"); }
+QPushButton[cssicon="plus"]:hover { background-image: url("__ICON_DIR__/plus.svg"); }
+QPushButton[cssicon="star"]:hover { background-image: url("__ICON_DIR__/star.svg"); }
+QPushButton[cssicon="star-filled"]:hover { background-image: url("__ICON_DIR__/star-filled.svg"); }
+QPushButton[cssicon="copy"]:hover { background-image: url("__ICON_DIR__/copy.svg"); }
+QPushButton[cssicon="clear"]:hover { background-image: url("__ICON_DIR__/clear.svg"); }
+QPushButton[cssicon="log"]:hover { background-image: url("__ICON_DIR__/log.svg"); }
+QPushButton[cssicon="stop"]:hover { background-image: url("__ICON_DIR__/stop.svg"); }
+QPushButton[cssicon="play"]:hover { background-image: url("__ICON_DIR__/play.svg"); }
+QPushButton[cssicon="close"]:hover { background-image: url("__ICON_DIR__/close.svg"); }
+QPushButton[cssicon="send"]:hover { background-image: url("__ICON_DIR__/send.svg"); }
+QPushButton[cssicon="refresh"]:hover { background-image: url("__ICON_DIR__/refresh.svg"); }
+QPushButton[cssicon="folder"]:hover { background-image: url("__ICON_DIR__/folder.svg"); }
+QPushButton[cssicon] {
+    background-repeat: no-repeat;
+    background-position: center;
+}
+QPushButton[cssicon]:hover {
+    background-repeat: no-repeat;
+    background-position: center;
+}
+QPushButton#TabClose[cssicon="close"] { background-image: url("__ICON_DIR__/close.svg"); background-repeat: no-repeat; background-position: center; }
+QPushButton#TabClose[cssicon="close"]:hover { background-image: url("__ICON_DIR__/close.svg"); background-repeat: no-repeat; background-position: center; }
+"""
+
+from .resources import assets_dir  # noqa: E402  (kept below the QSS literal)
+
+APP_QSS = APP_QSS.replace(
+    "__ICON_DIR__",
+    str(assets_dir() / "icons").replace("\\", "/"),
+) + _ICON_RULES.replace(
+    "__ICON_DIR__",
+    str(assets_dir() / "icons").replace("\\", "/"),
+)
+

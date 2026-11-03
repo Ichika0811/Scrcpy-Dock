@@ -45,17 +45,20 @@ from ..errors import AppError
 from ..parsers import is_valid_port
 from ..services.adb import AdbService
 from ..services.docker_ports import discover_docker_ports
+from ..services.releases import download_release, fetch_releases
 from ..services.scanner import scan_ports
 from ..services.terminals import TerminalManager
 from ..services.tools import inspect_tool_folder, inspect_tool_parent, rescan_tool
 from .. import __version__
 from .console import TerminalPanel
+from .icons import set_button_icon, ui_pixmap
 from .dialogs import (
     AboutDialog,
     AddNetworkDialog,
     AddPortDialog,
     BusyDialog,
     ConfirmDialog,
+    DownloadReleaseDialog,
     EditNetworkDialog,
     NetworkSettingsDialog,
     ToolSettingsDialog,
@@ -92,9 +95,13 @@ class ToastFrame(QFrame):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 9, 8, 9)
         layout.setSpacing(8)
-        glyph = {"error": "⚠", "warning": "⚠", "success": "✓"}.get(kind, "ⓘ")
-        icon = QLabel(glyph)
+        glyph = {"error": "warning", "warning": "warning", "success": "check"}.get(
+            kind, "info"
+        )
+        icon = QLabel()
         icon.setObjectName("ToastIcon")
+        icon.setPixmap(ui_pixmap(glyph, 16))
+        icon.setFixedSize(16, 16)
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(icon, 0, Qt.AlignmentFlag.AlignTop)
         copy = QVBoxLayout()
@@ -104,9 +111,10 @@ class ToastFrame(QFrame):
         text = make_label(message, object_name="ToastText", word_wrap=True)
         copy.addWidget(text)
         layout.addLayout(copy, 1)
-        close = QPushButton("✕")
+        close = QPushButton("")
         close.setProperty("kind", "favorite")
-        close.setFixedSize(17, 17)
+        set_button_icon(close, "close", 18)
+        close.setFixedSize(18, 18)
         close.clicked.connect(lambda: self._closer(self))
         layout.addWidget(close, 0, Qt.AlignmentFlag.AlignTop)
         self.adjustSize()
@@ -186,8 +194,9 @@ class MainWindow(QMainWindow):
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(11, 10, 11, 8)
         header_layout.setSpacing(9)
-        settings = QPushButton("⚙")
+        settings = QPushButton("")
         settings.setProperty("kind", "icon")
+        set_button_icon(settings, "settings", 18)
         settings.setToolTip("scrcpy 版本设置")
         settings.setCursor(Qt.CursorShape.PointingHandCursor)
         settings.clicked.connect(self.open_tool_settings)
@@ -197,14 +206,22 @@ class MainWindow(QMainWindow):
         title_box.addWidget(make_label("VERSIONS", role="eyebrow"))
         title_row = QHBoxLayout()
         title_row.setSpacing(5)
-        title_row.addWidget(make_label("scrcpy 版本", role="railTitle"))
+        title_row.addWidget(make_label("版本库", role="railTitle"))
         self.tool_count = make_label("0", role="countBadge")
         title_row.addWidget(self.tool_count)
         title_row.addStretch(1)
         title_box.addLayout(title_row)
         header_layout.addLayout(title_box, 1)
-        add = QPushButton("＋")
+        download = QPushButton("")
+        download.setProperty("kind", "icon")
+        set_button_icon(download, "download", 18)
+        download.setToolTip("下载官方 scrcpy 版本")
+        download.setCursor(Qt.CursorShape.PointingHandCursor)
+        download.clicked.connect(self.download_tool)
+        header_layout.addWidget(download, 0, Qt.AlignmentFlag.AlignTop)
+        add = QPushButton("")
         add.setProperty("kind", "add")
+        set_button_icon(add, "plus", 18)
         add.setToolTip("添加 scrcpy 版本")
         add.setCursor(Qt.CursorShape.PointingHandCursor)
         add.clicked.connect(self.add_tool)
@@ -217,8 +234,9 @@ class MainWindow(QMainWindow):
         caption_layout = QHBoxLayout(caption)
         caption_layout.setContentsMargins(13, 0, 13, 0)
         caption_layout.setSpacing(6)
-        dot = QLabel("●")
-        dot.setStyleSheet("color:#5eead4; font-size:5px;")
+        dot = QLabel()
+        dot.setFixedSize(6, 6)
+        dot.setStyleSheet("background:#5eead4; border-radius:3px;")
         caption_layout.addWidget(dot)
         self.tool_caption = make_label("只作用于当前终端", role="caption")
         caption_layout.addWidget(self.tool_caption)
@@ -243,7 +261,7 @@ class MainWindow(QMainWindow):
         footer_layout = QVBoxLayout(footer)
         footer_layout.setContentsMargins(10, 8, 10, 9)
         footer_layout.setSpacing(6)
-        hint = make_label("ⓘ  右键空白处添加或设置", role="faint")
+        hint = make_label("右键空白处添加或设置", role="faint")
         hint.setStyleSheet("font-size:8px; color:#46566a;")
         footer_layout.addWidget(hint)
         adb_pill = ClickableFrame()
@@ -266,7 +284,9 @@ class MainWindow(QMainWindow):
         adb_copy.addWidget(self.adb_label)
         adb_copy.addWidget(self.adb_source)
         adb_layout.addLayout(adb_copy, 1)
-        arrow = make_label("›", role="faint")
+        arrow = QLabel()
+        arrow.setPixmap(ui_pixmap("arrow-right", 12))
+        arrow.setFixedSize(12, 12)
         adb_layout.addWidget(arrow)
         footer_layout.addWidget(adb_pill)
         self.about_button = QPushButton(f"关于 Scrcpy Dock   v{__version__}")
@@ -302,8 +322,9 @@ class MainWindow(QMainWindow):
         self.tab_layout.addStretch(1)
         self.tab_scroll.setWidget(tab_content)
         tab_layout.addWidget(self.tab_scroll, 1)
-        plus = QPushButton("＋")
+        plus = QPushButton("")
         plus.setProperty("kind", "tabAdd")
+        set_button_icon(plus, "plus", 18)
         plus.setToolTip("新建终端")
         plus.setCursor(Qt.CursorShape.PointingHandCursor)
         plus.clicked.connect(self.create_terminal)
@@ -338,7 +359,7 @@ class MainWindow(QMainWindow):
         text.setObjectName("IdleText")
         text.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(text)
-        button = QPushButton("＋ 新建终端")
+        button = QPushButton("新建终端")
         button.setProperty("kind", "primary")
         button.clicked.connect(self.create_terminal)
         layout.addWidget(button, 0, Qt.AlignmentFlag.AlignHCenter)
@@ -359,8 +380,9 @@ class MainWindow(QMainWindow):
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(11, 10, 11, 8)
         header_layout.setSpacing(9)
-        settings = QPushButton("⚙")
+        settings = QPushButton("")
         settings.setProperty("kind", "icon")
+        set_button_icon(settings, "settings", 18)
         settings.setToolTip("IP 与 ADB 设置")
         settings.setCursor(Qt.CursorShape.PointingHandCursor)
         settings.clicked.connect(self.open_network_settings)
@@ -376,8 +398,9 @@ class MainWindow(QMainWindow):
         title_row.addStretch(1)
         title_box.addLayout(title_row)
         header_layout.addLayout(title_box, 1)
-        add = QPushButton("＋")
+        add = QPushButton("")
         add.setProperty("kind", "add")
+        set_button_icon(add, "plus", 18)
         add.setToolTip("添加 IP")
         add.setCursor(Qt.CursorShape.PointingHandCursor)
         add.clicked.connect(self.add_network)
@@ -390,8 +413,9 @@ class MainWindow(QMainWindow):
         caption_layout = QHBoxLayout(caption)
         caption_layout.setContentsMargins(13, 0, 13, 0)
         caption_layout.setSpacing(6)
-        dot = QLabel("●")
-        dot.setStyleSheet("color:#78a9ff; font-size:5px;")
+        dot = QLabel()
+        dot.setFixedSize(6, 6)
+        dot.setStyleSheet("background:#78a9ff; border-radius:3px;")
         caption_layout.addWidget(dot)
         caption_layout.addWidget(make_label("点击端口，一键连接到当前终端", role="caption"))
         caption_layout.addStretch(1)
@@ -420,14 +444,15 @@ class MainWindow(QMainWindow):
         self.device_footer = make_label("0 台 ADB 设备", role="faint")
         self.device_footer.setStyleSheet("font-size:8px;color:#4e5f74;")
         count_row.addWidget(self.device_footer, 1)
-        refresh = QPushButton("⟳")
+        refresh = QPushButton("")
         refresh.setProperty("kind", "favorite")
-        refresh.setFixedSize(20, 20)
+        set_button_icon(refresh, "refresh", 16)
+        refresh.setFixedSize(22, 22)
         refresh.setToolTip("刷新 ADB 设备与名称")
         refresh.clicked.connect(lambda: self.refresh_devices(silent=False))
         count_row.addWidget(refresh)
         footer_layout.addLayout(count_row)
-        hint = make_label("ⓘ  右键 IP 或空白处设置", role="faint")
+        hint = make_label("右键 IP 或空白处设置", role="faint")
         hint.setStyleSheet("font-size:8px; color:#46566a;")
         footer_layout.addWidget(hint)
         layout.addWidget(footer)
@@ -663,7 +688,7 @@ class MainWindow(QMainWindow):
                 widget.deleteLater()
         ids = list(self.manager.sessions)
         if not ids:
-            label = make_label("暂无终端，点击 ＋ 新建", role="faint")
+            label = make_label("暂无终端，点击右上角新建", role="faint")
             label.setContentsMargins(8, 8, 8, 8)
             self.tab_layout.addWidget(label)
             self.tab_layout.addStretch(1)
@@ -839,7 +864,11 @@ class MainWindow(QMainWindow):
                 "app",
                 "还没有 scrcpy 版本",
                 "添加完整解压后的 scrcpy 文件夹，自动识别版本，随时切换。",
-                [("＋ 添加版本", self.add_tool), ("▣ 批量扫描", self.add_tool_batch)],
+                [
+                    ("下载官方版本", self.download_tool),
+                    ("添加本地版本", self.add_tool),
+                    ("批量扫描", self.add_tool_batch),
+                ],
             )
             layout.addWidget(empty)
             layout.addStretch(1)
@@ -856,7 +885,7 @@ class MainWindow(QMainWindow):
         favorites = [tool for tool in tools if tool.get("favorite")]
         others = [tool for tool in tools if not tool.get("favorite")]
         if favorites:
-            layout.addWidget(make_label("★  收藏", role="sectionGold"))
+            layout.addWidget(make_label(" 收藏", role="sectionGold"))
             for tool in favorites:
                 card = ToolCard(decorated(tool), active=tool["id"] == current_tool)
                 card.selected.connect(self.select_tool)
@@ -964,6 +993,68 @@ class MainWindow(QMainWindow):
             )
 
         self._start_task(job, success, busy_text="正在识别 scrcpy 版本…")
+
+    def download_tool(self) -> None:
+        def success(releases: list[dict[str, Any]]) -> None:
+            if not releases:
+                self.toast(
+                    "info",
+                    "没有可下载的版本",
+                    "官方 Releases 中没有找到 Windows 安装包。",
+                )
+                return
+            dialog = DownloadReleaseDialog(
+                releases,
+                str(self.config.data_dir / "tools"),
+                self,
+            )
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+            values = dialog.values()
+            release = values.get("release")
+            directory = values.get("directory") or ""
+            if not release or not directory:
+                self.toast("warning", "下载参数不完整", "请选择版本和安装目录。")
+                return
+            self._install_release(release, directory)
+
+        self._start_task(
+            fetch_releases,
+            success,
+            busy_text="正在获取官方 scrcpy 版本列表…",
+        )
+
+    def _install_release(self, release: dict[str, Any], directory: str) -> None:
+        def job() -> dict[str, Any]:
+            folder = download_release(release, directory)
+            info = inspect_tool_folder(folder)
+            info["_release_tag"] = release.get("tag", "")
+            return info
+
+        def success(info: dict[str, Any]) -> None:
+            try:
+                tool = self.config.add_tool(info)
+            except AppError as exc:
+                self.toast_error(exc)
+                return
+            self.refresh_tool_rail()
+            self.refresh_network_rail()
+            self.refresh_adb_status()
+            self.refresh_pages_context()
+            warnings = "；".join(info.get("warnings") or [])
+            self.toast(
+                "success",
+                "scrcpy 下载完成",
+                f"{display_version(tool['version'])} 已加入版本库"
+                + (f"\n{warnings}" if warnings else ""),
+                duration=4200,
+            )
+
+        self._start_task(
+            job,
+            success,
+            busy_text=f"正在下载 {release.get('tag', 'scrcpy')}…",
+        )
 
     def add_tool_batch(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "选择包含多个 scrcpy 版本的父文件夹")
@@ -1105,10 +1196,10 @@ class MainWindow(QMainWindow):
             return
         menu = QMenu(self)
         current = self.active_snapshot()
-        action = menu.addAction("◎ 设为当前终端版本")
+        action = menu.addAction("设为当前终端版本")
         action.setEnabled(bool(self.active_terminal_id) and current.get("tool_id") != tool_id)
         action.triggered.connect(lambda: self.select_tool(tool_id))
-        action = menu.addAction("★ 取消收藏" if tool.get("favorite") else "☆ 收藏版本")
+        action = menu.addAction("取消收藏" if tool.get("favorite") else "收藏版本")
         action.triggered.connect(lambda: self.toggle_favorite(tool_id))
         color_menu = menu.addMenu("◈ 图标颜色")
         current_color = str(tool.get("color") or "").lower()
@@ -1123,29 +1214,31 @@ class MainWindow(QMainWindow):
         action = color_menu.addAction("自定义颜色…")
         action.triggered.connect(lambda: self.pick_tool_color(tool_id))
         menu.addSeparator()
-        action = menu.addAction("✎ 修改版本标签")
+        action = menu.addAction("修改版本标签")
         action.triggered.connect(lambda: self.edit_tool_version(tool_id))
-        action = menu.addAction("⟳ 重新检测版本")
+        action = menu.addAction("重新检测版本")
         action.triggered.connect(lambda: self.rescan_tool(tool_id))
-        action = menu.addAction("▣ 打开工具文件夹")
+        action = menu.addAction("打开工具文件夹")
         action.triggered.connect(lambda: self.open_tool_folder(tool_id))
         menu.addSeparator()
-        action = menu.addAction("✕ 从列表移除")
+        action = menu.addAction("从列表移除")
         action.triggered.connect(lambda: self.remove_tool(tool_id))
         menu.exec(position)
 
     def _tool_rail_menu(self, position: QPoint) -> None:
         menu = QMenu(self)
-        action = menu.addAction("＋ 添加 scrcpy 版本")
+        action = menu.addAction("添加 scrcpy 版本")
         action.triggered.connect(self.add_tool)
-        action = menu.addAction("▣ 批量扫描父文件夹")
+        action = menu.addAction("下载官方 scrcpy 版本")
+        action.triggered.connect(self.download_tool)
+        action = menu.addAction("批量扫描父文件夹")
         action.triggered.connect(self.add_tool_batch)
-        action = menu.addAction("⟳ 重新检测全部版本")
+        action = menu.addAction("重新检测全部版本")
         action.triggered.connect(self.rescan_all_tools)
         menu.addSeparator()
-        action = menu.addAction("⚙ 版本与启动设置")
+        action = menu.addAction("版本与启动设置")
         action.triggered.connect(self.open_tool_settings)
-        action = menu.addAction(f"ⓘ 关于 Scrcpy Dock v{__version__}")
+        action = menu.addAction(f"关于 Scrcpy Dock v{__version__}")
         action.triggered.connect(self.open_about)
         menu.exec(position)
 
@@ -1218,10 +1311,10 @@ class MainWindow(QMainWindow):
 
         if not networks:
             empty = self._rail_empty(
-                "◎",
+                "scan",
                 "还没有保存的 IP",
                 "添加设备 IP，自动扫描端口。点击端口即可在当前终端一键连接。",
-                [("＋ 添加 IP", self.add_network), ("▣ 手动添加", self.add_network)],
+                [("添加 IP", self.add_network), ("手动添加", self.add_network)],
             )
             layout.addWidget(empty)
             layout.addStretch(1)
@@ -1506,24 +1599,24 @@ class MainWindow(QMainWindow):
         if not network:
             return
         menu = QMenu(self)
-        action = menu.addAction("▶ 连接到当前终端")
+        action = menu.addAction("连接到当前终端")
         action.setEnabled(bool(self.active_terminal_id) and bool(network.get("ports")))
         if network.get("ports"):
             action.triggered.connect(
                 lambda: self.connect_port(network_id, network["ports"][0]["port"])
             )
-        action = menu.addAction("✎ 编辑 IP / 名称")
+        action = menu.addAction("编辑 IP / 名称")
         action.triggered.connect(lambda: self.edit_network(network_id))
-        action = menu.addAction("◉ 全端口扫描（1–65535）")
+        action = menu.addAction("全端口扫描（1–65535）")
         action.triggered.connect(lambda: self.scan_network(network_id, full=True))
-        action = menu.addAction("⟳ 快速扫描（常用范围）")
+        action = menu.addAction("快速扫描（常用范围）")
         action.triggered.connect(lambda: self.scan_network(network_id, full=False))
-        action = menu.addAction("＋ 添加端口")
+        action = menu.addAction("添加端口")
         action.triggered.connect(lambda: self.add_port(network_id))
-        action = menu.addAction("⧉ 复制 IP")
+        action = menu.addAction("复制 IP")
         action.triggered.connect(lambda: self._copy(network["ip"]))
         menu.addSeparator()
-        action = menu.addAction("✕ 移除 IP")
+        action = menu.addAction("移除 IP")
         action.triggered.connect(lambda: self.remove_network(network_id))
         menu.exec(position)
 
@@ -1532,26 +1625,26 @@ class MainWindow(QMainWindow):
         if not network:
             return
         menu = QMenu(self)
-        action = menu.addAction("▶ 连接到当前终端")
+        action = menu.addAction("连接到当前终端")
         action.setEnabled(bool(self.active_terminal_id))
         action.triggered.connect(lambda: self.connect_port(network_id, port))
-        action = menu.addAction("⧉ 复制 IP:端口")
+        action = menu.addAction("复制 IP:端口")
         action.triggered.connect(lambda: self._copy(f"{network['ip']}:{port}"))
         menu.addSeparator()
-        action = menu.addAction("✕ 移除端口")
+        action = menu.addAction("移除端口")
         action.triggered.connect(lambda: self.remove_port(network_id, port))
         menu.exec(position)
 
     def _network_rail_menu(self, position: QPoint) -> None:
         menu = QMenu(self)
-        action = menu.addAction("＋ 添加 IP")
+        action = menu.addAction("添加 IP")
         action.triggered.connect(self.add_network)
-        action = menu.addAction("⟳ 刷新 ADB 设备与名称")
+        action = menu.addAction("刷新 ADB 设备与名称")
         action.triggered.connect(lambda: self.refresh_devices(silent=False))
         menu.addSeparator()
-        action = menu.addAction("⚙ IP 与 ADB 设置")
+        action = menu.addAction("IP 与 ADB 设置")
         action.triggered.connect(self.open_network_settings)
-        action = menu.addAction(f"ⓘ 关于 Scrcpy Dock v{__version__}")
+        action = menu.addAction(f"关于 Scrcpy Dock v{__version__}")
         action.triggered.connect(self.open_about)
         menu.exec(position)
 
@@ -1560,9 +1653,9 @@ class MainWindow(QMainWindow):
             return
         snapshot = self.manager.snapshot(terminal_id)
         menu = QMenu(self)
-        action = menu.addAction("✕ 关闭终端")
+        action = menu.addAction("关闭终端")
         action.triggered.connect(lambda: self.close_terminal(terminal_id))
-        action = menu.addAction("⌫ 清空输出")
+        action = menu.addAction("清空输出")
         action.triggered.connect(
             lambda: (
                 self.pages[terminal_id].clear_console()
@@ -1571,12 +1664,12 @@ class MainWindow(QMainWindow):
                 self.manager.clear(terminal_id),
             )
         )
-        action = menu.addAction("⧉ 复制连接命令")
+        action = menu.addAction("复制连接命令")
         action.setEnabled(bool(snapshot.get("command")))
         action.triggered.connect(
             lambda: self._copy(self._terminal_command(snapshot))
         )
-        action = menu.addAction("■ 停止投屏" if self.manager.is_active_id(terminal_id) else "▶ 重连")
+        action = menu.addAction("停止投屏" if self.manager.is_active_id(terminal_id) else "重连")
         action.triggered.connect(
             lambda: (
                 self.manager.stop(terminal_id)
@@ -1588,7 +1681,7 @@ class MainWindow(QMainWindow):
 
     def _tab_empty_menu(self, position: QPoint) -> None:
         menu = QMenu(self)
-        action = menu.addAction("＋ 新建终端")
+        action = menu.addAction("新建终端")
         action.triggered.connect(self.create_terminal)
         menu.exec(position)
 
@@ -1765,13 +1858,19 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(15, 24, 15, 24)
         layout.setSpacing(7)
-        icon = QLabel(glyph if glyph != "app" else "")
+        icon = QLabel()
         icon.setObjectName("RailEmptyIcon")
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         if glyph == "app":
             icon.setFixedSize(38, 38)
             icon.setPixmap(app_pixmap(38))
             icon.setStyleSheet("background:transparent;border:none;")
+        elif glyph == "scan":
+            icon.setFixedSize(38, 38)
+            icon.setPixmap(ui_pixmap("scan", 38))
+            icon.setStyleSheet("background:transparent;border:none;")
+        else:
+            icon.setText(glyph)
         layout.addWidget(icon, 0, Qt.AlignmentFlag.AlignHCenter)
         title_label = QLabel(title)
         title_label.setObjectName("RailEmptyTitle")

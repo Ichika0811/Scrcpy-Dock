@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .icons import set_button_icon
 from .rails import display_version
 
 
@@ -61,8 +62,9 @@ class TerminalTab(QFrame):
         copy.addWidget(self.target_label)
         layout.addLayout(copy, 1)
 
-        self.close_button = QPushButton("✕")
+        self.close_button = QPushButton("")
         self.close_button.setObjectName("TabClose")
+        set_button_icon(self.close_button, "close", 14)
         self.close_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.close_button.setToolTip("关闭终端")
         self.close_button.clicked.connect(lambda: self.close_requested.emit(self.terminal_id))

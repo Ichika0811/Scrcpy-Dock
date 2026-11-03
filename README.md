@@ -6,7 +6,7 @@ Windows 桌面端 **scrcpy 多版本、多设备、多终端**管理工具。
 
 <img src="assets/icon.png" width="96" align="right" alt="Scrcpy Dock icon">
 
-![Version](https://img.shields.io/badge/version-1.2.6-5eead4)
+![Version](https://img.shields.io/badge/version-1.2.7-5eead4)
 ![Platform](https://img.shields.io/badge/platform-Windows-60a5fa)
 ![Python](https://img.shields.io/badge/python-3.11%2B-fbbf24)
 ![UI](https://img.shields.io/badge/UI-PySide6%20%2F%20Qt%206-a78bfa)
@@ -17,9 +17,11 @@ Windows 桌面端 **scrcpy 多版本、多设备、多终端**管理工具。
 
 - 自动执行 `scrcpy --version` 识别版本。
 - 单个添加或批量扫描父文件夹中的多个 scrcpy 版本。
+- 在软件内直接浏览 Genymobile/scrcpy 官方 Releases，下载 Windows 版本并自动解压加入版本库。
 - 版本标签可自定义，也可恢复自动识别。
 - 收藏版本，收藏项置顶。
 - 版本卡片使用彩色 Android 头像标识，右键可修改预设色或自定义颜色。
+- 操作图标使用内置 SVG + QSS（`assets/icons/`），不再依赖 Unicode/emoji 字符。
 - 自动导入 ADB 已连接的无线设备。
 - 自动合并本机 `docker ps` 中发布到 5555–5585 的 Android / ADB 端口，适合 redroid。
 - 每个 IP 支持 **全端口扫描 1–65535**，也提供常用范围快速扫描。
@@ -67,7 +69,7 @@ Windows 桌面端 **scrcpy 多版本、多设备、多终端**管理工具。
 发布后从 GitHub **Releases** 下载 Windows 免安装包：
 
 ```text
-ScrcpyDock-v1.2.6-win64.zip
+ScrcpyDock-v1.2.7-win64.zip
 ```
 
 解压后运行 `ScrcpyDock.exe`。仓库源码中不提交打包产物。
@@ -85,7 +87,7 @@ python run.py
 
 ## 使用流程
 
-1. 点击左栏右上角 `＋`，选择包含 `scrcpy.exe` 的完整版本文件夹；也可以用齿轮菜单批量扫描父文件夹。
+1. 点击左栏右上角 `⇩`，可以直接浏览并下载 scrcpy 官方稳定版；也可以点击 `＋` 添加本地已解压版本。
 2. 点击版本卡片，把它设为当前终端使用的 scrcpy。
 3. 右栏会自动导入已连接的无线 ADB 设备；也可以手动添加 IP。
 4. 展开 IP，点击端口即可连接当前终端。
@@ -94,9 +96,20 @@ python run.py
    - 默认添加 IP 后执行全端口扫描，可在“IP 与 ADB 设置”中关闭。
 5. 中间顶部 `＋` 新建更多终端；切换页签后，左右栏自动作用于新的当前终端。
 
+### 软件内下载 scrcpy
+
+点击左栏右上角 `⇩`（或左栏右键“下载官方 scrcpy 版本”）：
+
+![下载 scrcpy 版本](docs/download-dialog.png)
+
+1. 从 Genymobile/scrcpy 官方 GitHub Releases 获取稳定版列表。
+2. 选择版本和安装目录；默认安装到 `%LOCALAPPDATA%\ScrcpyDock\tools`。
+3. 下载完成后自动解压并加入左侧版本库。
+4. 下载会校验文件大小、GitHub 提供的 SHA-256、zip 路径安全和重复目录。
+
 ### 右键菜单
 
-- 左栏空白处：添加版本、批量扫描、重新检测全部、版本设置、关于。
+- 左栏空白处：添加版本、下载官方版本、批量扫描、重新检测全部、版本设置、关于。
 - 版本项：切换版本、收藏、修改标签、图标颜色、重新检测、打开文件夹、移除。
 - 右栏空白处：添加 IP、刷新 ADB 设备、IP 设置、关于。
 - IP 项：连接、编辑、全端口/快速扫描、添加端口、复制、移除。
@@ -145,6 +158,7 @@ app/
 │  ├─ adb.py                 # ADB 发现与设备列表
 │  ├─ docker_ports.py        # docker ps 发布端口
 │  ├─ scanner.py             # TCP 端口扫描 + ADB 握手
+│  ├─ releases.py            # 官方 scrcpy Release 下载与安全解压
 │  ├─ terminals.py           # QProcess 终端与命令执行
 │  ├─ tools.py               # scrcpy 版本发现
 │  └─ window_title.py        # Win32 scrcpy 窗口标题
