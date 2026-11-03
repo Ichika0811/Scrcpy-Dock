@@ -6,7 +6,7 @@ Windows 桌面端 **scrcpy 多版本、多设备、多终端**管理工具。
 
 <img src="assets/icon.png" width="96" align="right" alt="Scrcpy Dock icon">
 
-![Version](https://img.shields.io/badge/version-1.2.5-5eead4)
+![Version](https://img.shields.io/badge/version-1.2.6-5eead4)
 ![Platform](https://img.shields.io/badge/platform-Windows-60a5fa)
 ![Python](https://img.shields.io/badge/python-3.11%2B-fbbf24)
 ![UI](https://img.shields.io/badge/UI-PySide6%20%2F%20Qt%206-a78bfa)
@@ -67,7 +67,7 @@ Windows 桌面端 **scrcpy 多版本、多设备、多终端**管理工具。
 发布后从 GitHub **Releases** 下载 Windows 免安装包：
 
 ```text
-ScrcpyDock-v1.2.5-win64.zip
+ScrcpyDock-v1.2.6-win64.zip
 ```
 
 解压后运行 `ScrcpyDock.exe`。仓库源码中不提交打包产物。

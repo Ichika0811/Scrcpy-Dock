@@ -1,7 +1,7 @@
 VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(1, 2, 5, 0),
-    prodvers=(1, 2, 5, 0),
+    filevers=(1, 2, 6, 0),
+    prodvers=(1, 2, 6, 0),
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
@@ -17,12 +17,12 @@ VSVersionInfo(
           [
             StringStruct(u'CompanyName', u'Scrcpy Dock'),
             StringStruct(u'FileDescription', u'Scrcpy Dock 鈥?multi-terminal scrcpy manager'),
-            StringStruct(u'FileVersion', u'1.2.5'),
+            StringStruct(u'FileVersion', u'1.2.6'),
             StringStruct(u'InternalName', u'ScrcpyDock'),
             StringStruct(u'LegalCopyright', u'Scrcpy Dock'),
             StringStruct(u'OriginalFilename', u'ScrcpyDock.exe'),
             StringStruct(u'ProductName', u'Scrcpy Dock'),
-            StringStruct(u'ProductVersion', u'1.2.5')
+            StringStruct(u'ProductVersion', u'1.2.6')
           ]
         )
       ]

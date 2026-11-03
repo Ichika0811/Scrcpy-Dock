@@ -130,6 +130,39 @@ class TerminalConsole(QTextEdit):
         self.setFont(font)
         self._max_lines = 5000
         self._line_count = 0
+        self._follow = True
+        self._scroll_pending = False
+        bar = self.verticalScrollBar()
+        bar.sliderMoved.connect(lambda _value: self._follow_from_scrollbar())
+        bar.actionTriggered.connect(lambda _action: self._follow_from_scrollbar())
+
+    def _follow_from_scrollbar(self) -> None:
+        bar = self.verticalScrollBar()
+        self._follow = bar.value() >= bar.maximum() - 2
+
+    def scroll_to_bottom(self) -> None:
+        self._follow = True
+        self._schedule_scroll()
+
+    def _schedule_scroll(self) -> None:
+        if not self._follow or self._scroll_pending:
+            return
+        self._scroll_pending = True
+        QTimer.singleShot(0, self._apply_scroll)
+
+    def _apply_scroll(self) -> None:
+        self._scroll_pending = False
+        bar = self.verticalScrollBar()
+        bar.setValue(bar.maximum())
+        # QTextEdit updates its scroll range after the current layout pass.
+        QTimer.singleShot(0, self._scroll_again)
+
+    def _scroll_again(self) -> None:
+        try:
+            bar = self.verticalScrollBar()
+            bar.setValue(bar.maximum())
+        except RuntimeError:
+            pass
 
     def set_max_lines(self, value: int) -> None:
         self._max_lines = max(500, min(20000, int(value)))
@@ -205,12 +238,14 @@ class TerminalConsole(QTextEdit):
         self._line_count += 1
         if self._line_count > self._max_lines:
             self._line_count = self._max_lines
-        if autoscroll and (at_bottom or first):
-            bar.setValue(bar.maximum())
+        if autoscroll and (at_bottom or first or self._follow):
+            self._follow = True
+            self._schedule_scroll()
 
     def append_lines(self, lines: list[dict[str, Any]]) -> None:
         bar = self.verticalScrollBar()
-        at_bottom = bar.maximum() - bar.value() <= 4
+        if bar.maximum() - bar.value() <= 4:
+            self._follow = True
         for line in lines:
             self.append_line(
                 line.get("kind", "stdout"),
@@ -218,8 +253,8 @@ class TerminalConsole(QTextEdit):
                 line.get("ts"),
                 autoscroll=False,
             )
-        if at_bottom:
-            bar.setValue(bar.maximum())
+        if self._follow:
+            self._schedule_scroll()
 
 
 class TerminalCommandEdit(QLineEdit):
@@ -766,6 +801,9 @@ class TerminalPanel(QWidget):
             return
         self.console.append_lines(lines)
         self.footer_lines.setText(f"{self.console.line_count()} 行")
+
+    def scroll_to_bottom(self) -> None:
+        self.console.scroll_to_bottom()
 
     def clear_console(self) -> None:
         self.console.clear_console()

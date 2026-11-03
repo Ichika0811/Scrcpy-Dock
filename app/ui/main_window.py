@@ -646,6 +646,7 @@ class MainWindow(QMainWindow):
             self._update_page(terminal_id)
             if page.stack.currentWidget() is page.console_page:
                 page.command_text.setFocus()
+                page.scroll_to_bottom()
         self.refresh_tabs()
         self.refresh_tool_rail()
         self.refresh_network_rail()
