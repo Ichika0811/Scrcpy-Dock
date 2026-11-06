@@ -322,6 +322,32 @@ class MainWindow(QMainWindow):
         self.tab_layout.addStretch(1)
         self.tab_scroll.setWidget(tab_content)
         tab_layout.addWidget(self.tab_scroll, 1)
+        self.tab_prev = QPushButton("")
+        self.tab_prev.setProperty("kind", "favorite")
+        set_button_icon(self.tab_prev, "chevron-left", 14)
+        self.tab_prev.setFixedSize(22, 22)
+        self.tab_prev.setToolTip("向左滚动终端标签（也可用滚轮）")
+        self.tab_prev.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.tab_prev.setEnabled(False)
+        self.tab_prev.clicked.connect(lambda: self.scroll_tabs(-1))
+        tab_layout.addWidget(self.tab_prev, 0, Qt.AlignmentFlag.AlignVCenter)
+        self.tab_next = QPushButton("")
+        self.tab_next.setProperty("kind", "favorite")
+        set_button_icon(self.tab_next, "chevron-right", 14)
+        self.tab_next.setFixedSize(22, 22)
+        self.tab_next.setToolTip("向右滚动终端标签（也可用滚轮）")
+        self.tab_next.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.tab_next.setEnabled(False)
+        self.tab_next.clicked.connect(lambda: self.scroll_tabs(1))
+        tab_layout.addWidget(self.tab_next, 0, Qt.AlignmentFlag.AlignVCenter)
+        self.tab_all = QPushButton("")
+        self.tab_all.setProperty("kind", "favorite")
+        set_button_icon(self.tab_all, "tabs", 14)
+        self.tab_all.setFixedSize(22, 22)
+        self.tab_all.setToolTip("显示所有终端标签")
+        self.tab_all.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.tab_all.clicked.connect(self._show_tab_menu)
+        tab_layout.addWidget(self.tab_all, 0, Qt.AlignmentFlag.AlignVCenter)
         plus = QPushButton("")
         plus.setProperty("kind", "tabAdd")
         set_button_icon(plus, "plus", 18)
@@ -329,6 +355,8 @@ class MainWindow(QMainWindow):
         plus.setCursor(Qt.CursorShape.PointingHandCursor)
         plus.clicked.connect(self.create_terminal)
         tab_layout.addWidget(plus, 0, Qt.AlignmentFlag.AlignVCenter)
+        self.tab_scroll.horizontalScrollBar().valueChanged.connect(self._update_tab_nav)
+        self.tab_scroll.horizontalScrollBar().rangeChanged.connect(self._update_tab_nav)
         layout.addWidget(tabbar)
 
         self.stack = QStackedWidget()
@@ -540,8 +568,12 @@ class MainWindow(QMainWindow):
                 available.y() + max(0, (available.height() - height) // 2),
             )
         if saved.get("maximized"):
-            QTimer.singleShot(0, self.showMaximized)
+            QTimer.singleShot(0, self._show_maximized)
         self._update_rail_widths()
+
+    def _show_maximized(self) -> None:
+        if not self._closing:
+            self.showMaximized()
 
     def _save_geometry(self) -> None:
         maximized = self.isMaximized()
@@ -563,6 +595,8 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------- terminal
 
     def _ensure_initial_terminal(self) -> None:
+        if self._closing:
+            return
         if not self.manager.sessions:
             self.manager.create()
 
@@ -598,7 +632,6 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(page)
         self._update_page(terminal_id)
         self.set_active_terminal(terminal_id)
-        self.refresh_tabs()
 
     def _terminal_updated(self, terminal_id: str) -> None:
         if terminal_id not in self.pages:
@@ -618,6 +651,12 @@ class MainWindow(QMainWindow):
                 "error",
                 "终端连接失败",
                 snapshot.get("error") or "scrcpy 或 ADB 进程退出",
+            )
+        if snapshot["status"] == "disconnected" and previous != "disconnected":
+            self.toast(
+                "warning",
+                "设备已断开",
+                snapshot.get("error") or "设备连接已断开，可点击重连",
             )
         if snapshot["status"] == "running" and previous != "running":
             QTimer.singleShot(350, lambda: self.refresh_devices(silent=True))
@@ -672,48 +711,142 @@ class MainWindow(QMainWindow):
             if page.stack.currentWidget() is page.console_page:
                 page.command_text.setFocus()
                 page.scroll_to_bottom()
-        self.refresh_tabs()
+        self.refresh_tabs(scroll_active=True)
         self.refresh_tool_rail()
         self.refresh_network_rail()
         self.refresh_adb_status()
         self.refresh_window_title()
 
-    def refresh_tabs(self) -> None:
+    def refresh_tabs(self, *, scroll_active: bool = False) -> None:
         bar = self.tab_scroll.horizontalScrollBar()
         value = bar.value()
         while self.tab_layout.count():
             item = self.tab_layout.takeAt(0)
             widget = item.widget()
             if widget:
+                widget.hide()
                 widget.deleteLater()
         ids = list(self.manager.sessions)
         if not ids:
+            self.tab_content.setMinimumWidth(0)
             label = make_label("暂无终端，点击右上角新建", role="faint")
             label.setContentsMargins(8, 8, 8, 8)
             self.tab_layout.addWidget(label)
             self.tab_layout.addStretch(1)
+            QTimer.singleShot(0, self._update_tab_nav)
             return
-        for terminal_id in ids:
+        added: list[TerminalTab] = []
+        for index, terminal_id in enumerate(ids, start=1):
             snapshot = self.manager.snapshot(terminal_id)
-            tab = TerminalTab(snapshot, active=terminal_id == self.active_terminal_id)
+            tab = TerminalTab(
+                snapshot,
+                active=terminal_id == self.active_terminal_id,
+                index=index,
+            )
             tab.selected.connect(self.set_active_terminal)
             tab.close_requested.connect(self.close_terminal)
             tab.menu_requested.connect(self._tab_menu)
+            tab.move_requested.connect(self.reorder_terminal)
             self.tab_layout.addWidget(tab)
+            added.append(tab)
+            page = self.pages.get(terminal_id)
+            if page is not None:
+                page.set_index(index)
         self.tab_layout.addStretch(1)
-        QTimer.singleShot(0, lambda: bar.setValue(min(value, bar.maximum())))
-        QTimer.singleShot(
-            0,
-            lambda: self._scroll_active_tab_visible(),
-        )
+        spacing = self.tab_layout.spacing()
+        required = sum(tab.width() for tab in added) + spacing * max(0, len(added) - 1)
+        self.tab_content.setMinimumWidth(required)
+        QTimer.singleShot(0, lambda: self._restore_scroll(bar, value))
+        if scroll_active:
+            QTimer.singleShot(0, self._scroll_active_tab_visible)
+            QTimer.singleShot(50, self._scroll_active_tab_visible)
+        QTimer.singleShot(0, self._update_tab_nav)
 
     def _scroll_active_tab_visible(self) -> None:
-        if not self.active_terminal_id:
+        if self._closing or not self.active_terminal_id:
             return
-        for tab in self.tab_content.findChildren(TerminalTab):
-            if tab.terminal_id == self.active_terminal_id:
-                self.tab_scroll.ensureWidgetVisible(tab, 24, 0)
+        try:
+            for index in range(self.tab_layout.count()):
+                tab = self.tab_layout.itemAt(index).widget()
+                if isinstance(tab, TerminalTab) and tab.terminal_id == self.active_terminal_id:
+                    bar = self.tab_scroll.horizontalScrollBar()
+                    width = self.tab_scroll.viewport().width()
+                    left = tab.x() - 20
+                    right = tab.x() + tab.width() + 20
+                    if left < bar.value():
+                        bar.setValue(max(bar.minimum(), left))
+                    elif right > bar.value() + width:
+                        bar.setValue(min(bar.maximum(), right - width))
+                    break
+        except RuntimeError:
+            return
+
+    def scroll_tabs(self, direction: int) -> None:
+        bar = self.tab_scroll.horizontalScrollBar()
+        if bar.maximum() <= 0:
+            return
+        step = 0
+        for index in range(self.tab_layout.count()):
+            tab = self.tab_layout.itemAt(index).widget()
+            if isinstance(tab, TerminalTab):
+                step = tab.width() + self.tab_layout.spacing()
                 break
+        bar.setValue(bar.value() + direction * max(step, 120))
+
+    def _update_tab_nav(self, *_args: Any) -> None:
+        if self._closing:
+            return
+        try:
+            bar = self.tab_scroll.horizontalScrollBar()
+        except RuntimeError:
+            return
+        overflow = bar.maximum() > bar.minimum()
+        self.tab_prev.setEnabled(overflow and bar.value() > bar.minimum())
+        self.tab_next.setEnabled(overflow and bar.value() < bar.maximum())
+        self.tab_all.setEnabled(bool(self.manager.sessions))
+
+    def _show_tab_menu(self) -> None:
+        menu = QMenu(self)
+        menu.setToolTipsVisible(True)
+        ids = list(self.manager.sessions)
+        if not ids:
+            action = menu.addAction("暂无终端")
+            action.setEnabled(False)
+        for index, terminal_id in enumerate(ids, start=1):
+            snapshot = self.manager.snapshot(terminal_id)
+            target = snapshot.get("target") or {}
+            label = f"{index}. {display_version(snapshot.get('tool_version', ''))}"
+            if target.get("serial"):
+                label += f" · {target['serial']}"
+            action = menu.addAction(label)
+            action.setCheckable(True)
+            action.setChecked(terminal_id == self.active_terminal_id)
+            action.triggered.connect(
+                lambda _checked=False, tid=terminal_id: self.set_active_terminal(tid)
+            )
+        menu.exec(self.tab_all.mapToGlobal(QPoint(0, self.tab_all.height() + 4)))
+
+    def reorder_terminal(self, source_id: str, target_id: str, before: bool) -> None:
+        if source_id == target_id:
+            return
+        items = list(self.manager.sessions.items())
+        source = next(((index, item) for index, item in enumerate(items) if item[0] == source_id), None)
+        if not source:
+            return
+        source_index, source_item = source
+        del items[source_index]
+        target_index = next(
+            (index for index, item in enumerate(items) if item[0] == target_id),
+            None,
+        )
+        if target_index is None:
+            items.insert(source_index, source_item)
+            return
+        if not before:
+            target_index += 1
+        items.insert(target_index, source_item)
+        self.manager.sessions = dict(items)
+        self.refresh_tabs(scroll_active=True)
 
     def refresh_window_title(self) -> None:
         """Keep the application window name stable and free of session data."""
@@ -845,6 +978,7 @@ class MainWindow(QMainWindow):
         while self.tool_scroll_content.layout().count():
             item = self.tool_scroll_content.layout().takeAt(0)
             if item.widget():
+                item.widget().hide()
                 item.widget().deleteLater()
         layout = self.tool_scroll_content.layout()
         tools = self.config.tools
@@ -908,7 +1042,7 @@ class MainWindow(QMainWindow):
             note.setContentsMargins(0, 6, 0, 6)
             layout.addWidget(note)
         layout.addStretch(1)
-        QTimer.singleShot(0, lambda: bar.setValue(min(value, bar.maximum())))
+        QTimer.singleShot(0, lambda: self._restore_scroll(bar, value))
 
     def select_tool(self, tool_id: str) -> None:
         if not self.active_terminal_id or not self.manager.exists(self.active_terminal_id):
@@ -1291,6 +1425,7 @@ class MainWindow(QMainWindow):
         while self.network_scroll_content.layout().count():
             item = self.network_scroll_content.layout().takeAt(0)
             if item.widget():
+                item.widget().hide()
                 item.widget().deleteLater()
         layout = self.network_scroll_content.layout()
         networks = self.config.networks
@@ -1319,7 +1454,7 @@ class MainWindow(QMainWindow):
             layout.addWidget(empty)
             layout.addStretch(1)
             self._refresh_device_footer()
-            QTimer.singleShot(0, lambda: bar.setValue(min(value, bar.maximum())))
+            QTimer.singleShot(0, lambda: self._restore_scroll(bar, value))
             return
 
         online_ports = self._online_ports()
@@ -1344,7 +1479,7 @@ class MainWindow(QMainWindow):
             layout.addWidget(card)
         layout.addStretch(1)
         self._refresh_device_footer()
-        QTimer.singleShot(0, lambda: bar.setValue(min(value, bar.maximum())))
+        QTimer.singleShot(0, lambda: self._restore_scroll(bar, value))
 
     def _toggle_network(self, network_id: str) -> None:
         if network_id in self.expanded_networks:
@@ -1789,6 +1924,8 @@ class MainWindow(QMainWindow):
         return (snapshot or {}).get("tool_id") or self.config.last_tool_id
 
     def refresh_devices(self, *, silent: bool = False) -> None:
+        if self._closing:
+            return
         if self.device_task is not None:
             return
         tool_id = self._active_tool_id()
@@ -1902,6 +2039,14 @@ class MainWindow(QMainWindow):
         QApplication.clipboard().setText(text)
         self.toast("success", "已复制", text, duration=1800)
 
+    def _restore_scroll(self, bar, value: int) -> None:
+        if self._closing:
+            return
+        try:
+            bar.setValue(min(value, bar.maximum()))
+        except RuntimeError:
+            pass
+
     def refresh_pages_context(self) -> None:
         for terminal_id in list(self.pages):
             self._update_page(terminal_id)
@@ -1921,6 +2066,7 @@ class MainWindow(QMainWindow):
         self.toasts.append(frame)
         while len(self.toasts) > 4:
             oldest = self.toasts.pop(0)
+            oldest.hide()
             oldest.deleteLater()
         self._position_toasts()
         frame.show()
@@ -1935,9 +2081,14 @@ class MainWindow(QMainWindow):
         self.toast("error", title, message, duration=5400)
 
     def _dismiss_toast(self, frame: ToastFrame) -> None:
-        if frame in self.toasts:
-            self.toasts.remove(frame)
-        frame.deleteLater()
+        if frame not in self.toasts:
+            return
+        self.toasts.remove(frame)
+        try:
+            frame.deleteLater()
+        except RuntimeError:
+            # The toast may have been removed by another queued dismissal.
+            pass
         self._position_toasts()
 
     def _position_toasts(self) -> None:

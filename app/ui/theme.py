@@ -171,6 +171,7 @@ QLabel#StatusDot[state="stopping"] {
     background-color: #fbbf24;
 }
 QLabel#StatusDot[state="failed"] { background-color: #fb7185; }
+QLabel#StatusDot[state="disconnected"] { background-color: #fb7185; }
 QLabel#StatusDot[state="error"] { background-color: #fb7185; }
 QLabel#StatusDot[state="online"] { background-color: #4ade80; }
 QLabel#StatusDot[state="offline"] { background-color: #fbbf24; }
@@ -493,18 +494,18 @@ QWidget#TabBar {
     border-bottom: 1px solid rgba(148, 163, 184, 30);
 }
 QFrame#TerminalTab {
-    background-color: transparent;
+    background-color: rgba(148, 163, 184, 4);
     border: 1px solid transparent;
     border-bottom: 0;
     border-top-left-radius: 7px;
     border-top-right-radius: 7px;
 }
 QFrame#TerminalTab:hover {
-    background-color: rgba(148, 163, 184, 9);
+    background-color: rgba(148, 163, 184, 12);
 }
 QFrame#TerminalTab[active="true"] {
-    background-color: #0b121c;
-    border-color: rgba(148, 163, 184, 34);
+    background-color: #0d1724;
+    border-color: rgba(94, 234, 212, 42);
 }
 QLabel#TabVersion {
     color: #aebccd;
@@ -600,6 +601,11 @@ QLabel#StatusPill[state="failed"] {
     color: #e99ba6;
     border-color: rgba(251, 113, 133, 32);
     background-color: rgba(251, 113, 133, 11);
+}
+QLabel#StatusPill[state="disconnected"] {
+    color: #f0b8a0;
+    border-color: rgba(251, 146, 60, 36);
+    background-color: rgba(251, 146, 60, 12);
 }
 QTextEdit#Console {
     background-color: #060a11;
@@ -992,64 +998,3 @@ QToolTip {
     font-size: 9px;
 }
 """
-
-# QSS-referenced vector icons. The path is filled in below so the stylesheet
-# works both from source and from the PyInstaller onedir layout.
-_ICON_RULES = """
-QPushButton[cssicon="settings"] { background-image: url("__ICON_DIR__/settings.svg"); }
-QPushButton[cssicon="download"] { background-image: url("__ICON_DIR__/download.svg"); }
-QPushButton[cssicon="plus"] { background-image: url("__ICON_DIR__/plus.svg"); }
-QPushButton[cssicon="star"] { background-image: url("__ICON_DIR__/star.svg"); }
-QPushButton[cssicon="star-filled"] { background-image: url("__ICON_DIR__/star-filled.svg"); }
-QPushButton[cssicon="copy"] { background-image: url("__ICON_DIR__/copy.svg"); }
-QPushButton[cssicon="clear"] { background-image: url("__ICON_DIR__/clear.svg"); }
-QPushButton[cssicon="log"] { background-image: url("__ICON_DIR__/log.svg"); }
-QPushButton[cssicon="stop"] { background-image: url("__ICON_DIR__/stop.svg"); }
-QPushButton[cssicon="play"] { background-image: url("__ICON_DIR__/play.svg"); }
-QPushButton[cssicon="close"] { background-image: url("__ICON_DIR__/close.svg"); }
-QPushButton[cssicon="send"] { background-image: url("__ICON_DIR__/send.svg"); }
-QPushButton[cssicon="refresh"] { background-image: url("__ICON_DIR__/refresh.svg"); }
-QPushButton[cssicon="folder"] { background-image: url("__ICON_DIR__/folder.svg"); }
-QLabel[cssicon="chevron-down"] { image: url("__ICON_DIR__/chevron-down.svg"); }
-QLabel[cssicon="chevron-right"] { image: url("__ICON_DIR__/chevron-right.svg"); }
-QLabel[cssicon="arrow-right"] { image: url("__ICON_DIR__/arrow-right.svg"); }
-QLabel[cssicon="scan"] { image: url("__ICON_DIR__/scan.svg"); }
-QLabel[cssicon="info"] { image: url("__ICON_DIR__/info.svg"); }
-QLabel[cssicon="warning"] { image: url("__ICON_DIR__/warning.svg"); }
-QLabel[cssicon="check"] { image: url("__ICON_DIR__/check.svg"); }
-QPushButton[cssicon="settings"]:hover { background-image: url("__ICON_DIR__/settings.svg"); }
-QPushButton[cssicon="download"]:hover { background-image: url("__ICON_DIR__/download.svg"); }
-QPushButton[cssicon="plus"]:hover { background-image: url("__ICON_DIR__/plus.svg"); }
-QPushButton[cssicon="star"]:hover { background-image: url("__ICON_DIR__/star.svg"); }
-QPushButton[cssicon="star-filled"]:hover { background-image: url("__ICON_DIR__/star-filled.svg"); }
-QPushButton[cssicon="copy"]:hover { background-image: url("__ICON_DIR__/copy.svg"); }
-QPushButton[cssicon="clear"]:hover { background-image: url("__ICON_DIR__/clear.svg"); }
-QPushButton[cssicon="log"]:hover { background-image: url("__ICON_DIR__/log.svg"); }
-QPushButton[cssicon="stop"]:hover { background-image: url("__ICON_DIR__/stop.svg"); }
-QPushButton[cssicon="play"]:hover { background-image: url("__ICON_DIR__/play.svg"); }
-QPushButton[cssicon="close"]:hover { background-image: url("__ICON_DIR__/close.svg"); }
-QPushButton[cssicon="send"]:hover { background-image: url("__ICON_DIR__/send.svg"); }
-QPushButton[cssicon="refresh"]:hover { background-image: url("__ICON_DIR__/refresh.svg"); }
-QPushButton[cssicon="folder"]:hover { background-image: url("__ICON_DIR__/folder.svg"); }
-QPushButton[cssicon] {
-    background-repeat: no-repeat;
-    background-position: center;
-}
-QPushButton[cssicon]:hover {
-    background-repeat: no-repeat;
-    background-position: center;
-}
-QPushButton#TabClose[cssicon="close"] { background-image: url("__ICON_DIR__/close.svg"); background-repeat: no-repeat; background-position: center; }
-QPushButton#TabClose[cssicon="close"]:hover { background-image: url("__ICON_DIR__/close.svg"); background-repeat: no-repeat; background-position: center; }
-"""
-
-from .resources import assets_dir  # noqa: E402  (kept below the QSS literal)
-
-APP_QSS = APP_QSS.replace(
-    "__ICON_DIR__",
-    str(assets_dir() / "icons").replace("\\", "/"),
-) + _ICON_RULES.replace(
-    "__ICON_DIR__",
-    str(assets_dir() / "icons").replace("\\", "/"),
-)
-

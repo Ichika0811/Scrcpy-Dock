@@ -25,14 +25,14 @@ git log --oneline -1
 ## 3. 创建 Release
 
 1. 在 GitHub 仓库打开 **Releases → Draft a new release**。
-2. Tag 填 `v1.2.7`，标题填 `Scrcpy Dock v1.2.7`。
+2. Tag 填 `v1.2.8`，标题填 `Scrcpy Dock v1.2.8`。
 3. 上传 Windows 免安装包：
 
 ```text
-ScrcpyDock-v1.2.7-win64.zip
+ScrcpyDock-v1.2.8-win64.zip
 ```
 
-4. 把 `CHANGELOG.md` 中 `1.2.7` 部分粘贴到 release notes。
+4. 把 `CHANGELOG.md` 中 `1.2.8` 部分粘贴到 release notes。
 5. 发布。
 
 ## 4. 仓库建议设置
@@ -46,7 +46,7 @@ ScrcpyDock-v1.2.7-win64.zip
 如果使用网页上传而不是 `git push`，上传：
 
 ```text
-ScrcpyDock-src-v1.2.7.zip
+ScrcpyDock-src-v1.2.8.zip
 ```
 
 不要把 43MB 的 Windows 免安装包放进源码仓库；它应作为 Release 附件。

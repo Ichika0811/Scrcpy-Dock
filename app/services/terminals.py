@@ -26,6 +26,21 @@ from ..parsers import (
 from .adb import AdbService
 from .window_title import set_scrcpy_window_title
 
+DISCONNECT_MARKERS = (
+    "device disconnected",
+    "could not send keep alive",
+    "device offline",
+    "connection reset by peer",
+    "broken pipe",
+    "could not read from socket",
+    "failed to read from socket",
+)
+
+
+def is_device_disconnect_message(text: str) -> bool:
+    lowered = text.lower()
+    return any(marker in lowered for marker in DISCONNECT_MARKERS)
+
 
 @dataclass
 class LogLine:
@@ -219,9 +234,9 @@ class TerminalManager(QObject):
         self._write_log(session, line)
         self.output.emit(session.id, [line.as_dict()])
 
-    def _append_text(self, session: TerminalSession, key: str, kind: str, text: str) -> None:
+    def _append_text(self, session: TerminalSession, key: str, kind: str, text: str) -> list[str]:
         if not text:
-            return
+            return []
         value = (session.carry.get(key, "") + text).replace("\r\n", "\n").replace("\r", "\n")
         parts = value.split("\n")
         session.carry[key] = parts.pop() if parts else ""
@@ -230,6 +245,7 @@ class TerminalManager(QObject):
         if len(session.carry.get(key, "")) > 20000:
             self._append(session, kind, session.carry[key])
             session.carry[key] = ""
+        return parts
 
     def _flush_carry(self, session: TerminalSession) -> None:
         for key, kind in (
@@ -717,11 +733,18 @@ class TerminalManager(QObject):
                 return
             out = bytes(process.readAllStandardOutput()).decode("utf-8", errors="replace")
             err = bytes(process.readAllStandardError()).decode("utf-8", errors="replace")
-            self._append_text(session, "stdout", "stdout", out)
-            self._append_text(session, "stderr", "stderr", err)
+            lines: list[str] = []
+            lines.extend(self._append_text(session, "stdout", "stdout", out))
+            lines.extend(self._append_text(session, "stderr", "stderr", err))
+            if is_device_disconnect_message(clean_line("\n".join(lines))):
+                self._handle_device_disconnect(session, generation, process)
 
         def started() -> None:
-            if generation != session.generation or session.process is not process:
+            if (
+                generation != session.generation
+                or session.process is not process
+                or session.status in {"disconnected", "failed", "stopped"}
+            ):
                 return
             session.pid = process.processId() or None
             session.status = "running"
@@ -764,6 +787,32 @@ class TerminalManager(QObject):
         if session.pid != pid or session.status != "running":
             return
         set_scrcpy_window_title(pid, title)
+
+    def _handle_device_disconnect(
+        self,
+        session: TerminalSession,
+        generation: int,
+        process: QProcess,
+    ) -> None:
+        if generation != session.generation or session.process is not process:
+            return
+        if session.stopping or session.status in {"disconnected", "failed", "stopped"}:
+            return
+        session.status = "disconnected"
+        session.error = "设备已断开连接"
+        session.ended_at = time.time()
+        session.pid = None
+        session.exit_code = None
+        session.stopping = False
+        session.process = None
+        self._append(session, "error", "设备已断开连接，投屏进程已结束。")
+        self._append(
+            session,
+            "hint",
+            "确认手机无线调试和网络后，点击重连或右侧端口即可重新连接。",
+        )
+        self._emit_updated(session)
+        QTimer.singleShot(0, lambda p=process: self._kill_process(p))
 
     def _on_process_error(
         self,

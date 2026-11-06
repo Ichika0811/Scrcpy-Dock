@@ -153,8 +153,11 @@ class TerminalConsole(QTextEdit):
 
     def _apply_scroll(self) -> None:
         self._scroll_pending = False
-        bar = self.verticalScrollBar()
-        bar.setValue(bar.maximum())
+        try:
+            bar = self.verticalScrollBar()
+            bar.setValue(bar.maximum())
+        except RuntimeError:
+            return
         # QTextEdit updates its scroll range after the current layout pass.
         QTimer.singleShot(0, self._scroll_again)
 
@@ -366,6 +369,7 @@ class TerminalPanel(QWidget):
         "stopping": "正在停止",
         "stopped": "已停止",
         "failed": "连接失败",
+        "disconnected": "设备已断开",
     }
 
     def __init__(self, terminal_id: str, index: int, parent: QWidget | None = None) -> None:
@@ -708,6 +712,14 @@ class TerminalPanel(QWidget):
             self.idle_secondary.setText("添加 scrcpy 版本")
             self.idle_secondary.setVisible(True)
 
+    def set_index(self, index: int) -> None:
+        index = max(1, int(index))
+        if self.index == index:
+            return
+        self.index = index
+        if self.snapshot:
+            self.update_snapshot(self.snapshot)
+
     def update_snapshot(self, snapshot: dict[str, Any]) -> None:
         self.snapshot = snapshot
         target = snapshot.get("target")
@@ -753,7 +765,7 @@ class TerminalPanel(QWidget):
         self._repolish(self.status_pill)
 
         active = status in {"connecting", "starting", "running", "stopping"}
-        stopped = status in {"stopped", "failed"}
+        stopped = status in {"stopped", "failed", "disconnected"}
         self.copy_button.setVisible(bool(target))
         self.copy_button.setEnabled(bool(snapshot.get("command")))
         self.clear_button.setVisible(bool(target))
@@ -799,7 +811,7 @@ class TerminalPanel(QWidget):
         else:
             self.progress_banner.hide()
 
-        if status == "failed" and snapshot.get("error"):
+        if status in {"failed", "disconnected"} and snapshot.get("error"):
             self.error_banner.show()
             self.error_text.setText(snapshot["error"])
         else:
