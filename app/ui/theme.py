@@ -818,6 +818,29 @@ QLineEdit:disabled {
     color: #526176;
     background-color: rgba(4, 9, 15, 90);
 }
+QListWidget#TerminalSwitcherList {
+    color: #c9d5e3;
+    background-color: #0b1119;
+    border: 1px solid rgba(148, 163, 184, 26);
+    border-radius: 6px;
+    padding: 4px;
+    outline: 0;
+}
+QListWidget#TerminalSwitcherList::item {
+    padding: 8px 9px;
+    border-radius: 4px;
+}
+QListWidget#TerminalSwitcherList::item:selected {
+    color: #dffff9;
+    background-color: rgba(94, 234, 212, 28);
+}
+QListWidget#TerminalSwitcherList::item:hover {
+    background-color: rgba(148, 163, 184, 14);
+}
+QLineEdit#Search {
+    min-height: 28px;
+    padding: 0 8px;
+}
 QComboBox::drop-down {
     border: none;
     width: 20px;

@@ -12,13 +12,13 @@ from PySide6.QtGui import QFont
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from app import __version__
 from app.config import ConfigStore
+from app.services.logs import cleanup_logs
 from app.ui.main_window import MainWindow
 from app.ui.resources import app_icon
 from app.ui.theme import APP_QSS
 
-INSTANCE_NAME = f"ScrcpyDock.Instance.{__version__}"
+INSTANCE_NAME = "ScrcpyDock.Instance"
 
 
 def _set_windows_app_id() -> None:
@@ -73,6 +73,12 @@ def main() -> int:
 
     config = ConfigStore()
     _configure_logging(config)
+    settings = config.settings
+    cleanup_logs(
+        config.logs_dir,
+        retention_days=int(settings.get("log_retention_days", 14)),
+        max_total_mb=int(settings.get("log_max_total_mb", 100)),
+    )
     app.setWindowIcon(app_icon())
 
     window = MainWindow(config)

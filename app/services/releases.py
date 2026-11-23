@@ -9,6 +9,7 @@ import os
 import re
 import shutil
 import stat
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -113,6 +114,7 @@ def _download(
     release: dict[str, Any],
     target: Path,
     progress: Callable[[int, int], None] | None,
+    cancel: threading.Event | None = None,
 ) -> None:
     url = str(release["download_url"])
     if not url.startswith(RELEASE_PREFIX):
@@ -134,6 +136,8 @@ def _download(
         with urllib.request.urlopen(request, timeout=45) as response, target.open("wb") as handle:
             total = int(response.headers.get("Content-Length") or expected or 0)
             while True:
+                if cancel is not None and cancel.is_set():
+                    raise AppError("下载已取消", code="DOWNLOAD_CANCELLED")
                 chunk = response.read(256 * 1024)
                 if not chunk:
                     break
@@ -194,6 +198,7 @@ def download_release(
     release: dict[str, Any],
     destination_root: str | Path,
     progress: Callable[[int, int], None] | None = None,
+    cancel: threading.Event | None = None,
 ) -> Path:
     """Download, validate and extract one official scrcpy Windows release.
 
@@ -224,7 +229,7 @@ def download_release(
                 path.unlink(missing_ok=True)
 
     try:
-        _download(release, temporary_zip, progress)
+        _download(release, temporary_zip, progress, cancel)
         _extract(temporary_zip, temporary_dir)
         scrcpy, _count, _truncated = find_executable(temporary_dir, "scrcpy.exe")
         if not scrcpy:

@@ -51,6 +51,19 @@ class ScannerTests(unittest.TestCase):
         with self.assertRaises(Exception):
             scan_ports("not a host", 5555, 5555)
 
+    def test_cancelled_scan_stops_before_probing(self) -> None:
+        event = threading.Event()
+        event.set()
+        result = scan_ports(
+            "127.0.0.1",
+            start=16000,
+            end=16010,
+            timeout_ms=100,
+            cancel_event=event,
+        )
+        self.assertTrue(result["cancelled"])
+        self.assertEqual(result["scanned"], 0)
+
     def test_adb_handshake_detection(self) -> None:
         server = socket.socket()
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

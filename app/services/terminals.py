@@ -788,31 +788,53 @@ class TerminalManager(QObject):
             return
         set_scrcpy_window_title(pid, title)
 
+    def mark_device_missing(self, terminal_id: str, message: str = "") -> bool:
+        """Mark a running session as disconnected from an external ADB poll.
+
+        scrcpy usually logs a device-disconnect message, but older builds and
+        unusual transports can leave the process alive without one. The UI's
+        periodic adb device list is therefore used as a conservative fallback.
+        """
+        session = self.sessions.get(terminal_id)
+        if not session or not self.is_active_id(terminal_id):
+            return False
+        self._handle_device_disconnect(
+            session,
+            session.generation,
+            session.process,
+            message or "ADB 设备列表中未找到当前设备",
+        )
+        return session.status == "disconnected"
+
     def _handle_device_disconnect(
         self,
         session: TerminalSession,
         generation: int,
-        process: QProcess,
+        process: QProcess | None,
+        message: str = "设备已断开连接",
     ) -> None:
-        if generation != session.generation or session.process is not process:
+        if generation != session.generation:
+            return
+        if process is not None and session.process is not process:
             return
         if session.stopping or session.status in {"disconnected", "failed", "stopped"}:
             return
         session.status = "disconnected"
-        session.error = "设备已断开连接"
+        session.error = message
         session.ended_at = time.time()
         session.pid = None
         session.exit_code = None
         session.stopping = False
         session.process = None
-        self._append(session, "error", "设备已断开连接，投屏进程已结束。")
+        self._append(session, "error", f"{message}，投屏进程已结束。")
         self._append(
             session,
             "hint",
             "确认手机无线调试和网络后，点击重连或右侧端口即可重新连接。",
         )
         self._emit_updated(session)
-        QTimer.singleShot(0, lambda p=process: self._kill_process(p))
+        if process is not None:
+            QTimer.singleShot(0, lambda p=process: self._kill_process(p))
 
     def _on_process_error(
         self,

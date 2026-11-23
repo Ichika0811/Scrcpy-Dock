@@ -571,6 +571,32 @@ class NetworkSettingsDialog(AppDialog):
         idx = self.max_lines.findData(int(sheet.get("max_terminal_lines", 5000)))
         self.max_lines.setCurrentIndex(max(0, idx))
         layout3.addWidget(form_field("输出缓冲", self.max_lines))
+        log_row = QWidget()
+        log_layout = QHBoxLayout(log_row)
+        log_layout.setContentsMargins(0, 0, 0, 0)
+        log_layout.setSpacing(6)
+        self.log_retention = QSpinBox()
+        self.log_retention.setRange(1, 365)
+        self.log_retention.setSuffix(" 天")
+        self.log_retention.setValue(int(sheet.get("log_retention_days", 14)))
+        self.log_max_total = QComboBox()
+        for value in (50, 100, 250, 500, 1024):
+            self.log_max_total.addItem(f"{value} MB", value)
+        max_index = self.log_max_total.findData(int(sheet.get("log_max_total_mb", 100)))
+        self.log_max_total.setCurrentIndex(max(0, max_index))
+        log_layout.addWidget(_label("保留", "FormHelp"))
+        log_layout.addWidget(self.log_retention)
+        log_layout.addSpacing(6)
+        log_layout.addWidget(_label("总大小上限", "FormHelp"))
+        log_layout.addWidget(self.log_max_total)
+        log_layout.addStretch(1)
+        layout3.addWidget(
+            form_field(
+                "日志清理",
+                log_row,
+                "启动时自动删除过期终端日志，并在总大小超限时删除最旧的日志。",
+            )
+        )
         links = QHBoxLayout()
         links.setSpacing(5)
         data_button = QPushButton("数据目录")
@@ -634,22 +660,52 @@ class NetworkSettingsDialog(AppDialog):
             "scan_end": self.scan_end.value(),
             "scan_timeout_ms": int(self.timeout.currentData()),
             "max_terminal_lines": int(self.max_lines.currentData()),
+            "log_retention_days": self.log_retention.value(),
+            "log_max_total_mb": int(self.log_max_total.currentData()),
         }
 
 
 class BusyDialog(AppDialog):
-    """Small indeterminate progress dialog for filesystem/version work."""
+    """Progress dialog for filesystem/version work."""
 
-    def __init__(self, message: str, parent: QWidget | None = None) -> None:
+    cancel_requested = Signal()
+
+    def __init__(
+        self,
+        message: str,
+        parent: QWidget | None = None,
+        *,
+        cancelable: bool = False,
+    ) -> None:
         super().__init__("请稍候", message, width=380, parent=parent)
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
-        bar = QProgressBar()
-        bar.setRange(0, 0)
-        bar.setTextVisible(False)
-        bar.setFixedHeight(5)
-        self.body_layout.addWidget(bar)
-        self.footer.hide()
+        self.status_label = QLabel("")
+        self.status_label.setObjectName("FormHelp")
+        self.status_label.setWordWrap(True)
+        self.body_layout.addWidget(self.status_label)
+        self.bar = QProgressBar()
+        self.bar.setRange(0, 0)
+        self.bar.setTextVisible(False)
+        self.bar.setFixedHeight(5)
+        self.body_layout.addWidget(self.bar)
+        self.footer.setVisible(cancelable)
+        if cancelable:
+            self.add_footer_button("取消", slot=self.cancel_requested.emit)
         self.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, False)
+
+    def set_progress(self, written: int, total: int) -> None:
+        if total > 0:
+            self.bar.setRange(0, int(total))
+            self.bar.setValue(min(int(written), int(total)))
+            self.status_label.setText(
+                f"{written / (1024 * 1024):.1f} / {total / (1024 * 1024):.1f} MB"
+            )
+        else:
+            self.bar.setRange(0, 0)
+            self.status_label.setText(f"{written / (1024 * 1024):.1f} MB")
+
+    def set_status(self, text: str) -> None:
+        self.status_label.setText(text)
 
 
 class AboutDialog(AppDialog):

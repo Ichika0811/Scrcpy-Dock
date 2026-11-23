@@ -7,6 +7,8 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Push-Location $root
 try {
     Write-Host "Using Python: $Python" -ForegroundColor Cyan
+    & $Python "$root\packaging\sync_version.py"
+    if ($LASTEXITCODE -ne 0) { throw "Version sync failed with exit code $LASTEXITCODE" }
     Remove-Item -LiteralPath "$root\build\pyinstaller" -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath "$root\build\ScrcpyDock.spec" -Force -ErrorAction SilentlyContinue
     & $Python -m PyInstaller `

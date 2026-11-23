@@ -5,14 +5,13 @@ from __future__ import annotations
 import subprocess
 import sys
 import threading
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
 import platform
 from PySide6 import __version__ as pyside_version
-from PySide6.QtCore import QObject, QPoint, QRect, QSize, QTimer, Qt, QUrl, Signal, Slot, qVersion
+from PySide6.QtCore import QPoint, QRect, QSize, QTimer, Qt, QUrl, qVersion
 from PySide6.QtGui import (
     QColor,
     QCloseEvent,
@@ -45,6 +44,7 @@ from ..errors import AppError
 from ..parsers import is_valid_port
 from ..services.adb import AdbService
 from ..services.docker_ports import discover_docker_ports
+from ..services.logs import cleanup_logs
 from ..services.releases import download_release, fetch_releases
 from ..services.scanner import scan_ports
 from ..services.terminals import TerminalManager
@@ -56,7 +56,6 @@ from .dialogs import (
     AboutDialog,
     AddNetworkDialog,
     AddPortDialog,
-    BusyDialog,
     ConfirmDialog,
     DownloadReleaseDialog,
     EditNetworkDialog,
@@ -67,15 +66,8 @@ from .dialogs import (
 from .native import apply_dark_titlebar
 from .rails import ClickableFrame, NetworkCard, ToolCard, display_version, make_label, repolish
 from .resources import app_icon, app_pixmap
-from .tabs import TabScrollArea, TerminalTab
-
-
-class _TaskSignals(QObject):
-    """Queued relay from Python worker threads back to the Qt main thread."""
-
-    result = Signal(int, object)
-    failed = Signal(int, object)
-    finished = Signal(int)
+from .tasks import TaskRunner
+from .tabs import TabScrollArea, TerminalSwitcherDialog, TerminalTab
 
 
 class ToastFrame(QFrame):
@@ -131,19 +123,20 @@ class MainWindow(QMainWindow):
         self.pages: dict[str, TerminalPanel] = {}
         self.expanded_networks: set[str] = set()
         self.scanning_networks: set[str] = set()
+        self.scan_events: dict[str, threading.Event] = {}
         self.devices: list[dict[str, Any]] = []
         self.devices_error: str = ""
         self.device_task: int | None = None
         self.status_cache: dict[str, str] = {}
-        self.tasks: dict[int, dict[str, Any]] = {}
-        self._task_seq = 0
+        self.device_miss_counts: dict[str, int] = {}
         self.toasts: list[ToastFrame] = []
         self.tool_settings_dialog: ToolSettingsDialog | None = None
         self._closing = False
-        self.task_signals = _TaskSignals(self)
-        self.task_signals.result.connect(self._task_result)
-        self.task_signals.failed.connect(self._task_failure)
-        self.task_signals.finished.connect(self._task_finished)
+        self.task_runner = TaskRunner(
+            self,
+            self._task_error,
+            self._task_cancelled,
+        )
 
         self.setWindowTitle("Scrcpy Dock")
         self.setWindowIcon(app_icon())
@@ -344,7 +337,7 @@ class MainWindow(QMainWindow):
         self.tab_all.setProperty("kind", "favorite")
         set_button_icon(self.tab_all, "tabs", 14)
         self.tab_all.setFixedSize(22, 22)
-        self.tab_all.setToolTip("显示所有终端标签")
+        self.tab_all.setToolTip("搜索并切换终端（Ctrl+1..9）")
         self.tab_all.setCursor(Qt.CursorShape.PointingHandCursor)
         self.tab_all.clicked.connect(self._show_tab_menu)
         tab_layout.addWidget(self.tab_all, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -503,6 +496,16 @@ class MainWindow(QMainWindow):
         for sequence, slot in shortcuts:
             shortcut = QShortcut(sequence, self)
             shortcut.activated.connect(slot)
+        for number in range(1, 10):
+            shortcut = QShortcut(QKeySequence(f"Ctrl+{number}"), self)
+            shortcut.activated.connect(
+                lambda n=number: self._activate_tab_number(n)
+            )
+
+    def _activate_tab_number(self, number: int) -> None:
+        ids = list(self.manager.sessions)
+        if 1 <= number <= len(ids):
+            self.set_active_terminal(ids[number - 1])
 
     def _bind_rail_contexts(self) -> None:
         tool_widgets = [
@@ -668,6 +671,7 @@ class MainWindow(QMainWindow):
 
     def _terminal_removed(self, terminal_id: str) -> None:
         page = self.pages.pop(terminal_id, None)
+        self.device_miss_counts.pop(terminal_id, None)
         if page:
             self.stack.removeWidget(page)
             page.deleteLater()
@@ -806,25 +810,20 @@ class MainWindow(QMainWindow):
         self.tab_all.setEnabled(bool(self.manager.sessions))
 
     def _show_tab_menu(self) -> None:
-        menu = QMenu(self)
-        menu.setToolTipsVisible(True)
         ids = list(self.manager.sessions)
         if not ids:
-            action = menu.addAction("暂无终端")
-            action.setEnabled(False)
+            return
+        entries: list[tuple[str, str]] = []
         for index, terminal_id in enumerate(ids, start=1):
             snapshot = self.manager.snapshot(terminal_id)
             target = snapshot.get("target") or {}
-            label = f"{index}. {display_version(snapshot.get('tool_version', ''))}"
+            label = f"{index}. 终端 {index} · {display_version(snapshot.get('tool_version', ''))}"
             if target.get("serial"):
                 label += f" · {target['serial']}"
-            action = menu.addAction(label)
-            action.setCheckable(True)
-            action.setChecked(terminal_id == self.active_terminal_id)
-            action.triggered.connect(
-                lambda _checked=False, tid=terminal_id: self.set_active_terminal(tid)
-            )
-        menu.exec(self.tab_all.mapToGlobal(QPoint(0, self.tab_all.height() + 4)))
+            entries.append((terminal_id, label))
+        dialog = TerminalSwitcherDialog(entries, self.active_terminal_id, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_id:
+            self.set_active_terminal(dialog.selected_id)
 
     def reorder_terminal(self, source_id: str, target_id: str, before: bool) -> None:
         if source_id == target_id:
@@ -1159,8 +1158,15 @@ class MainWindow(QMainWindow):
         )
 
     def _install_release(self, release: dict[str, Any], directory: str) -> None:
-        def job() -> dict[str, Any]:
-            folder = download_release(release, directory)
+        cancel_event = threading.Event()
+
+        def job(progress_cb) -> dict[str, Any]:
+            folder = download_release(
+                release,
+                directory,
+                progress=progress_cb,
+                cancel=cancel_event,
+            )
             info = inspect_tool_folder(folder)
             info["_release_tag"] = release.get("tag", "")
             return info
@@ -1188,6 +1194,8 @@ class MainWindow(QMainWindow):
             job,
             success,
             busy_text=f"正在下载 {release.get('tag', 'scrcpy')}…",
+            progress=True,
+            cancel_event=cancel_event,
         )
 
     def add_tool_batch(self) -> None:
@@ -1473,6 +1481,7 @@ class MainWindow(QMainWindow):
             card.port_clicked.connect(self.connect_port)
             card.scan_requested.connect(lambda nid: self.scan_network(nid, full=True))
             card.quick_scan_requested.connect(lambda nid: self.scan_network(nid, full=False))
+            card.cancel_scan_requested.connect(self.cancel_scan)
             card.add_port_requested.connect(self.add_port)
             card.menu_requested.connect(self._network_menu)
             card.port_context_requested.connect(self._port_menu)
@@ -1619,6 +1628,8 @@ class MainWindow(QMainWindow):
         if not network or network_id in self.scanning_networks:
             return
         settings = self.config.settings
+        cancel_event = threading.Event()
+        self.scan_events[network_id] = cancel_event
         self.scanning_networks.add(network_id)
         self.expanded_networks.add(network_id)
         self.refresh_network_rail()
@@ -1642,6 +1653,7 @@ class MainWindow(QMainWindow):
                     *[entry["port"] for entry in docker_ports],
                 ],
                 verify_adb=True,
+                cancel_event=cancel_event,
             )
             result["docker_ports"] = docker_ports
             result["full_scan"] = full
@@ -1649,7 +1661,17 @@ class MainWindow(QMainWindow):
 
         def success(result: dict[str, Any]) -> None:
             self.scanning_networks.discard(network_id)
+            self.scan_events.pop(network_id, None)
             if not self.config.get_network(network_id):
+                return
+            if result.get("cancelled"):
+                self.refresh_network_rail()
+                self.toast(
+                    "info",
+                    "扫描已停止",
+                    f"已检查 {result.get('scanned', 0)} 个端口，未应用本次扫描结果。",
+                    duration=2600,
+                )
                 return
             open_ports = result.get("open_ports") or []
             adb_ports = set(result.get("adb_ports") or [])
@@ -1702,10 +1724,19 @@ class MainWindow(QMainWindow):
 
         def failure(exc: Exception) -> None:
             self.scanning_networks.discard(network_id)
+            self.scan_events.pop(network_id, None)
             self.refresh_network_rail()
             self.toast_error(exc if isinstance(exc, AppError) else AppError(str(exc)), "扫描失败")
 
         self._start_task(job, success, failure)
+
+    def cancel_scan(self, network_id: str) -> None:
+        event = self.scan_events.get(network_id)
+        if event is None:
+            return
+        event.set()
+        self.refresh_network_rail()
+        self.toast("info", "正在停止扫描", "已停止提交新端口，等待当前探测结束。", duration=2200)
 
     def connect_port(self, network_id: str, port: int) -> None:
         network = self.config.get_network(network_id)
@@ -1838,6 +1869,17 @@ class MainWindow(QMainWindow):
         self.config.update_settings(values)
         for page in self.pages.values():
             page.set_max_lines(int(self.config.settings.get("max_terminal_lines", 5000)))
+        settings = self.config.settings
+        cleanup_logs(
+            self.config.logs_dir,
+            retention_days=int(settings.get("log_retention_days", 14)),
+            max_total_mb=int(settings.get("log_max_total_mb", 100)),
+            keep={
+                session.log_path
+                for session in self.manager.sessions.values()
+                if session.log_path
+            },
+        )
         self.refresh_adb_status()
         self.refresh_pages_context()
         self.refresh_devices(silent=True)
@@ -1946,6 +1988,7 @@ class MainWindow(QMainWindow):
                 self.devices,
                 auto_import=bool(self.config.settings.get("auto_import_adb_devices", True)),
             )
+            self._reconcile_device_sessions()
             self.refresh_network_rail()
             self.refresh_adb_status()
             if self.active_terminal_id:
@@ -1962,12 +2005,39 @@ class MainWindow(QMainWindow):
             self.device_task = None
             self.devices = []
             self.devices_error = str(exc)
+            self.device_miss_counts.clear()
             self.refresh_network_rail()
             self.refresh_adb_status()
             if not silent:
                 self.toast_error(exc, "设备列表不可用")
 
         self.device_task = self._start_task(job, success, failure)
+
+    def _reconcile_device_sessions(self) -> None:
+        online = {
+            str(device.get("serial") or "").casefold()
+            for device in self.devices
+            if device.get("online")
+        }
+        for terminal_id in list(self.manager.sessions):
+            snapshot = self.manager.snapshot(terminal_id)
+            if snapshot.get("status") not in {"starting", "running"}:
+                self.device_miss_counts.pop(terminal_id, None)
+                continue
+            target = snapshot.get("target") or {}
+            serial = str(target.get("serial") or "").casefold()
+            if not serial:
+                continue
+            if serial in online:
+                self.device_miss_counts.pop(terminal_id, None)
+                continue
+            count = self.device_miss_counts.get(terminal_id, 0) + 1
+            self.device_miss_counts[terminal_id] = count
+            if count >= 2 and self.manager.mark_device_missing(
+                terminal_id,
+                f"ADB 设备列表中未找到 {target.get('serial')}",
+            ):
+                self.device_miss_counts.pop(terminal_id, None)
 
     def refresh_adb_status(self) -> None:
         info = self.adb.get_adb_info(self._active_tool_id())
@@ -2123,106 +2193,31 @@ class MainWindow(QMainWindow):
 
     def _start_task(
         self,
-        function: Callable[[], Any],
+        function: Callable[..., Any],
         success: Callable[[Any], None],
         failure: Callable[[Exception], None] | None = None,
         *,
         busy_text: str | None = None,
+        progress: bool = False,
+        cancel_event: threading.Event | None = None,
     ) -> int:
-        self._task_seq += 1
-        task_id = self._task_seq
-        busy = BusyDialog(busy_text, self) if busy_text else None
-        if busy:
-            busy.show()
-            busy.raise_()
-            QApplication.processEvents()
-        thread = threading.Thread(
-            target=self._run_task,
-            args=(task_id, function),
-            name=f"ScrcpyDockTask-{task_id}",
-            daemon=True,
+        return self.task_runner.start(
+            function,
+            success,
+            failure,
+            busy_text=busy_text,
+            progress=progress,
+            cancel_event=cancel_event,
         )
-        self.tasks[task_id] = {
-            "thread": thread,
-            "success": success,
-            "failure": failure,
-            "busy": busy,
-            "finished": False,
-        }
-        thread.start()
-        return task_id
 
-    def _run_task(self, task_id: int, function: Callable[[], Any]) -> None:
-        """Executed on a plain Python thread.
+    def _task_error(self, error: Exception, title: str) -> None:
+        self.toast_error(error, title)
 
-        Worker functions must not touch Qt widgets. Results are relayed through
-        a main-thread QObject signal; this avoids the GIL/Qt-mutex deadlock that
-        QThread + deleteLater can produce.
-        """
-        try:
-            value = function()
-        except Exception as exc:  # noqa: BLE001 - delivered to the UI
-            self.task_signals.failed.emit(task_id, exc)
-        else:
-            self.task_signals.result.emit(task_id, value)
-        finally:
-            self.task_signals.finished.emit(task_id)
-
-    @Slot(int, object)
-    def _task_result(self, task_id: int, value: Any) -> None:
-        task = self.tasks.get(task_id)
-        if not task or task.get("finished"):
-            return
-        task["finished"] = True
-        busy = task.get("busy")
-        if busy:
-            busy.close()
-        try:
-            task["success"](value)
-        except Exception as exc:  # noqa: BLE001
-            self.toast_error(exc, "处理结果失败")
-        if task_id == self.device_task:
-            self.device_task = None
-
-    @Slot(int, object)
-    def _task_failure(self, task_id: int, error: Exception) -> None:
-        task = self.tasks.get(task_id)
-        if not task or task.get("finished"):
-            return
-        task["finished"] = True
-        busy = task.get("busy")
-        if busy:
-            busy.close()
-        callback = task.get("failure")
-        if callback:
-            try:
-                callback(error)
-            except Exception as exc:  # noqa: BLE001
-                self.toast_error(exc)
-        else:
-            self.toast_error(error)
-        if task_id == self.device_task:
-            self.device_task = None
-
-    @Slot(int)
-    def _task_finished(self, task_id: int) -> None:
-        task = self.tasks.pop(task_id, None)
-        if not task:
-            return
-        busy = task.get("busy")
-        if busy:
-            busy.close()
+    def _task_cancelled(self, message: str) -> None:
+        self.toast("info", "下载已取消", message, duration=2200)
 
     def _wait_for_tasks(self) -> None:
-        deadline = time.monotonic() + 6.0
-        for task in list(self.tasks.values()):
-            thread = task.get("thread")
-            if not thread:
-                continue
-            remaining = max(0.0, deadline - time.monotonic())
-            if remaining <= 0:
-                break
-            thread.join(remaining)
+        self.task_runner.wait(6.0)
 
     # ----------------------------------------------------------------- close
 

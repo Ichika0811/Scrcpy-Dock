@@ -298,6 +298,7 @@ class NetworkCard(QFrame):
     menu_requested = Signal(str, QPoint)
     scan_requested = Signal(str)
     quick_scan_requested = Signal(str)
+    cancel_scan_requested = Signal(str)
     add_port_requested = Signal(str)
 
     def __init__(
@@ -411,11 +412,22 @@ class NetworkCard(QFrame):
             actions = QHBoxLayout()
             actions.setContentsMargins(0, 3, 0, 0)
             actions.setSpacing(4)
-            full_scan_button = QPushButton("全端口" if not scanning else "◌ 正在扫描…")
-            full_scan_button.setProperty("kind", "link")
-            full_scan_button.setEnabled(not scanning)
-            full_scan_button.setToolTip("扫描 1–65535，并验证 ADB 端口；需要几十秒")
-            full_scan_button.clicked.connect(lambda: self.scan_requested.emit(self.network["id"]))
+            if scanning:
+                full_scan_button = QPushButton("停止扫描")
+                full_scan_button.setProperty("kind", "link")
+                full_scan_button.setEnabled(True)
+                full_scan_button.setToolTip("停止提交新的端口探测")
+                full_scan_button.clicked.connect(
+                    lambda: self.cancel_scan_requested.emit(self.network["id"])
+                )
+            else:
+                full_scan_button = QPushButton("全端口")
+                full_scan_button.setProperty("kind", "link")
+                full_scan_button.setEnabled(True)
+                full_scan_button.setToolTip("扫描 1–65535，并验证 ADB 端口；需要几十秒")
+                full_scan_button.clicked.connect(
+                    lambda: self.scan_requested.emit(self.network["id"])
+                )
             quick_button = QPushButton("快速")
             quick_button.setProperty("kind", "link")
             quick_button.setEnabled(not scanning)

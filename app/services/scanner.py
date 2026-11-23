@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import socket
 import struct
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
@@ -75,6 +76,7 @@ def verify_adb_ports(
     *,
     timeout: float = 1.0,
     concurrency: int = 16,
+    cancel_event: threading.Event | None = None,
 ) -> list[int]:
     if not ports:
         return []
@@ -82,6 +84,10 @@ def verify_adb_ports(
     with ThreadPoolExecutor(max_workers=max(1, min(32, concurrency))) as pool:
         futures = {pool.submit(probe_adb, host, port, timeout): port for port in ports}
         for future in as_completed(futures):
+            if cancel_event is not None and cancel_event.is_set():
+                for pending in futures:
+                    pending.cancel()
+                break
             try:
                 if future.result():
                     verified.append(futures[future])
@@ -98,6 +104,7 @@ def scan_ports(
     extra_ports: list[int] | None = None,
     concurrency: int = 32,
     verify_adb: bool = False,
+    cancel_event: threading.Event | None = None,
 ) -> dict[str, Any]:
     clean_host = str(host or "").strip()
     if not is_valid_host(clean_host):
@@ -123,30 +130,49 @@ def scan_ports(
 
     started = time.perf_counter()
     results: list[dict[str, Any]] = []
+    cancelled = False
     worker_count = max(1, min(256, max(int(concurrency), len(ordered) // 32)))
+    batch_size = 2048
     with ThreadPoolExecutor(max_workers=worker_count) as pool:
-        futures = {pool.submit(_probe, ip, port, timeout): port for port in ordered}
-        for future in as_completed(futures):
-            try:
-                results.append(future.result())
-            except Exception:
-                results.append({"port": futures[future], "open": False, "latency_ms": 0})
+        for batch_start in range(0, len(ordered), batch_size):
+            if cancel_event is not None and cancel_event.is_set():
+                cancelled = True
+                break
+            batch = ordered[batch_start : batch_start + batch_size]
+            futures = {pool.submit(_probe, ip, port, timeout): port for port in batch}
+            for future in as_completed(futures):
+                if cancel_event is not None and cancel_event.is_set():
+                    cancelled = True
+                    for pending in futures:
+                        pending.cancel()
+                    break
+                try:
+                    results.append(future.result())
+                except Exception:
+                    results.append(
+                        {"port": futures[future], "open": False, "latency_ms": 0}
+                    )
+            if cancelled:
+                break
 
     results.sort(key=lambda item: item["port"])
     open_ports = [item for item in results if item["open"]]
     adb_ports: list[int] = []
-    if verify_adb and open_ports:
+    if verify_adb and open_ports and not cancelled:
         adb_ports = verify_adb_ports(
             ip,
             [item["port"] for item in open_ports],
             timeout=min(1.5, max(0.6, timeout * 2.5)),
             concurrency=16,
+            cancel_event=cancel_event,
         )
     return {
         "host": clean_host,
         "ip": ip,
         "range": {"start": first, "end": last},
-        "scanned": len(ordered),
+        "scanned": len(results),
+        "requested": len(ordered),
+        "cancelled": cancelled,
         "timeout_ms": int(timeout * 1000),
         "elapsed_ms": round((time.perf_counter() - started) * 1000),
         "ports": results,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import contextlib
 import json
 import os
 import time
@@ -51,6 +52,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "auto_import_adb_devices": True,
     "use_docker_ports": True,
     "max_terminal_lines": 5000,
+    "log_retention_days": 14,
+    "log_max_total_mb": 100,
     "default_args": "",
 }
 
@@ -107,6 +110,8 @@ def normalize_settings(raw: dict[str, Any] | None) -> dict[str, Any]:
         "auto_import_adb_devices": bool(data.get("auto_import_adb_devices", True)),
         "use_docker_ports": bool(data.get("use_docker_ports", True)),
         "max_terminal_lines": _clamp(data.get("max_terminal_lines"), 5000, 500, 20000),
+        "log_retention_days": _clamp(data.get("log_retention_days"), 14, 1, 365),
+        "log_max_total_mb": _clamp(data.get("log_max_total_mb"), 100, 10, 2048),
         "default_args": str(data.get("default_args") or "")[:8000],
     }
 
@@ -255,11 +260,40 @@ class ConfigStore:
             self.data = normalize_config({})
             self.save()
 
+    @contextlib.contextmanager
+    def _config_lock(self):
+        """Serialize config writes between app instances/versions on Windows."""
+        lock_handle = (self.data_dir / ".config.lock").open("a+b")
+        locked = False
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                lock_handle.seek(0)
+                if not lock_handle.read(1):
+                    lock_handle.write(b"\0")
+                    lock_handle.flush()
+                lock_handle.seek(0)
+                msvcrt.locking(lock_handle.fileno(), msvcrt.LK_LOCK, 1)
+                locked = True
+            yield
+        finally:
+            if locked:
+                import msvcrt
+
+                try:
+                    lock_handle.seek(0)
+                    msvcrt.locking(lock_handle.fileno(), msvcrt.LK_UNLCK, 1)
+                except OSError:
+                    pass
+            lock_handle.close()
+
     def save(self) -> None:
         payload = json.dumps(self.data, ensure_ascii=False, indent=2) + "\n"
         temporary = self.config_path.with_suffix(".json.tmp")
-        temporary.write_text(payload, encoding="utf-8")
-        os.replace(temporary, self.config_path)
+        with self._config_lock():
+            temporary.write_text(payload, encoding="utf-8")
+            os.replace(temporary, self.config_path)
 
     # ------------------------------------------------------------------ tools
 

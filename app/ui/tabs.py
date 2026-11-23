@@ -8,9 +8,13 @@ from PySide6.QtCore import QPoint, Qt, Signal
 from PySide6.QtGui import QColor, QContextMenuEvent, QMouseEvent, QWheelEvent
 from PySide6.QtWidgets import (
     QApplication,
+    QDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -31,6 +35,15 @@ TAB_ACCENTS = (
     "#fb923c",
     "#67e8f9",
 )
+
+
+def tab_accent(index: int) -> str:
+    """Return a stable, visually distinct accent for any tab number."""
+    index = max(1, int(index))
+    if index <= len(TAB_ACCENTS):
+        return TAB_ACCENTS[index - 1]
+    hue = int((index * 137.508) % 360)
+    return QColor.fromHsl(hue, 165, 185).name()
 
 
 def _rgba(color: str, alpha: int) -> str:
@@ -55,7 +68,7 @@ class TerminalTab(QFrame):
         super().__init__(parent)
         self.terminal_id = snapshot["id"]
         self.index = max(1, int(index))
-        self.accent = TAB_ACCENTS[(self.index - 1) % len(TAB_ACCENTS)]
+        self.accent = tab_accent(self.index)
         self._press_pos: QPoint | None = None
         self._dragging = False
         self.setObjectName("TerminalTab")
@@ -166,6 +179,79 @@ class TerminalTab(QFrame):
     def contextMenuEvent(self, event: QContextMenuEvent) -> None:
         self.menu_requested.emit(self.terminal_id, event.globalPos())
         event.accept()
+
+
+class TerminalSwitcherDialog(QDialog):
+    """Searchable terminal switcher used by the tab-bar list button."""
+
+    def __init__(
+        self,
+        entries: list[tuple[str, str]],
+        current_id: str | None,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setObjectName("AppDialog")
+        self.setWindowTitle("切换终端")
+        self.setModal(True)
+        self.resize(460, 380)
+        self.selected_id: str | None = None
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 12)
+        layout.setSpacing(8)
+        title = QLabel("所有终端")
+        title.setObjectName("DialogTitle")
+        layout.addWidget(title)
+        self.search = QLineEdit()
+        self.search.setObjectName("Search")
+        self.search.setClearButtonEnabled(True)
+        self.search.setPlaceholderText("搜索终端编号、版本或设备地址")
+        layout.addWidget(self.search)
+        self.list = QListWidget()
+        self.list.setObjectName("TerminalSwitcherList")
+        for terminal_id, label in entries:
+            item = QListWidgetItem(label)
+            item.setData(Qt.ItemDataRole.UserRole, terminal_id)
+            self.list.addItem(item)
+            if terminal_id == current_id:
+                self.list.setCurrentItem(item)
+        layout.addWidget(self.list, 1)
+        cancel = QPushButton("取消")
+        cancel.setProperty("kind", "ghost")
+        cancel.clicked.connect(self.reject)
+        footer = QHBoxLayout()
+        footer.addStretch(1)
+        footer.addWidget(cancel)
+        layout.addLayout(footer)
+
+        self.search.textChanged.connect(self._filter)
+        self.search.returnPressed.connect(self._choose_current)
+        self.list.itemActivated.connect(self._choose)
+        self.list.itemDoubleClicked.connect(self._choose)
+        self.search.setFocus()
+
+    def _filter(self, text: str) -> None:
+        needle = str(text or "").strip().casefold()
+        first_visible: QListWidgetItem | None = None
+        for index in range(self.list.count()):
+            item = self.list.item(index)
+            hidden = bool(needle) and needle not in item.text().casefold()
+            item.setHidden(hidden)
+            if not hidden and first_visible is None:
+                first_visible = item
+        if first_visible is not None:
+            self.list.setCurrentItem(first_visible)
+
+    def _choose_current(self) -> None:
+        item = self.list.currentItem()
+        if item is not None and not item.isHidden():
+            self._choose(item)
+
+    def _choose(self, item: QListWidgetItem) -> None:
+        self.selected_id = str(item.data(Qt.ItemDataRole.UserRole) or "")
+        if self.selected_id:
+            self.accept()
 
 
 class TabScrollArea(QScrollArea):

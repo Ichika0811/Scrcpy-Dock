@@ -6,7 +6,7 @@ Windows 桌面端 **scrcpy 多版本、多设备、多终端**管理工具。
 
 <img src="assets/icon.png" width="96" align="right" alt="Scrcpy Dock icon">
 
-![Version](https://img.shields.io/badge/version-1.2.8-5eead4)
+![Version](https://img.shields.io/badge/version-1.2.9-5eead4)
 ![Platform](https://img.shields.io/badge/platform-Windows-60a5fa)
 ![Python](https://img.shields.io/badge/python-3.11%2B-fbbf24)
 ![UI](https://img.shields.io/badge/UI-PySide6%20%2F%20Qt%206-a78bfa)
@@ -18,16 +18,18 @@ Windows 桌面端 **scrcpy 多版本、多设备、多终端**管理工具。
 - 自动执行 `scrcpy --version` 识别版本。
 - 单个添加或批量扫描父文件夹中的多个 scrcpy 版本。
 - 在软件内直接浏览 Genymobile/scrcpy 官方 Releases，下载 Windows 版本并自动解压加入版本库。
+- 下载过程显示进度，可取消；取消后会清理临时文件。
 - 版本标签可自定义，也可恢复自动识别。
 - 收藏版本，收藏项置顶。
 - 版本卡片使用彩色 Android 头像标识，右键可修改预设色或自定义颜色。
 - 操作图标使用内置 SVG，由 QIcon 按高 DPI 渲染；QSS 负责按钮尺寸、颜色和状态。
 - 终端标签显示“终端 N · 版本”，每个标签有独立强调色和序号徽章，支持拖拽排序。
-- 标签溢出时可用左右按钮、鼠标滚轮或“所有终端”菜单导航。
+- 标签溢出时可用左右按钮、鼠标滚轮或“所有终端”搜索切换器导航；`Ctrl+1` 到 `Ctrl+9` 快速切换。
 - 自动导入 ADB 已连接的无线设备。
 - 自动合并本机 `docker ps` 中发布到 5555–5585 的 Android / ADB 端口，适合 redroid。
 - 每个 IP 支持 **全端口扫描 1–65535**，也提供常用范围快速扫描。
 - 全端口扫描使用 ADB CNXN 握手过滤 SMB、RPC、Web 等普通服务，只保留可用 adbd 端口。
+- 全端口扫描分批执行，可中途停止；停止后不会应用不完整结果。
 - IP 端口分组可以随时展开/收起，已连接的 IP 不会被强制展开。
 
 ### 连接与终端
@@ -42,6 +44,8 @@ Windows 桌面端 **scrcpy 多版本、多设备、多终端**管理工具。
 - 多个终端并行运行，页签显示版本和 `IP:端口`。
 - 终端输出实时滚动、自动写日志，并支持停止、重连、清空和复制命令。
 - 自动识别 scrcpy 的 `Device disconnected`、`keep alive` 失败等日志，标记“设备已断开”并清理残留进程。
+- ADB 设备列表轮询作为兜底：连续未发现当前设备时同样标记断连。
+- 终端日志默认保留 14 天、总大小上限 100 MB，可在设置中调整。
 - 中央终端底部可直接输入命令：
   - `Enter`：运行
   - `↑ / ↓`：命令历史
@@ -54,6 +58,7 @@ Windows 桌面端 **scrcpy 多版本、多设备、多终端**管理工具。
 ### 应用
 
 - 主窗口标题固定为 `Scrcpy Dock`。
+- 单实例运行；配置写入带文件锁，避免多个版本同时写坏配置。
 - 左栏底部 “关于 Scrcpy Dock” 或 `F1` 打开版本信息页，可查看软件版本、构建时间、Qt / PySide6 / Python、系统、ADB、数据路径和运行统计，并复制诊断信息。
 - 退出时统一结束 scrcpy 进程树和未完成命令，避免残留。
 
@@ -72,7 +77,7 @@ Windows 桌面端 **scrcpy 多版本、多设备、多终端**管理工具。
 发布后从 GitHub **Releases** 下载 Windows 免安装包：
 
 ```text
-ScrcpyDock-v1.2.8-win64.zip
+ScrcpyDock-v1.2.9-win64.zip
 ```
 
 解压后运行 `ScrcpyDock.exe`。仓库源码中不提交打包产物。
@@ -160,6 +165,7 @@ app/
 ├─ services/
 │  ├─ adb.py                 # ADB 发现与设备列表
 │  ├─ docker_ports.py        # docker ps 发布端口
+│  ├─ logs.py                # 终端日志保留/清理
 │  ├─ scanner.py             # TCP 端口扫描 + ADB 握手
 │  ├─ releases.py            # 官方 scrcpy Release 下载与安全解压
 │  ├─ terminals.py           # QProcess 终端与命令执行
@@ -169,7 +175,9 @@ app/
    ├─ main_window.py         # 三栏主界面
    ├─ console.py             # 终端输出与输入
    ├─ rails.py               # 左右栏卡片
-   ├─ tabs.py                # 多行终端页签
+   ├─ tabs.py                # 多行终端页签与搜索切换器
+   ├─ tasks.py               # 后台任务运行器
+   ├─ icons.py               # 高 DPI SVG 图标加载
    ├─ dialogs.py             # 设置、关于等对话框
    ├─ resources.py           # 应用图标加载
    └─ theme.py               # Qt 样式表
@@ -196,6 +204,8 @@ release\ScrcpyDock\ScrcpyDock.exe
 ```
 
 当前使用 PyInstaller 的 `--onedir --windowed` 免安装目录形式。需要安装包时可在该产物上追加 NSIS / Inno Setup。
+
+`build.ps1` 会先调用 `packaging/sync_version.py`，从 `app/__init__.py` 同步版本信息、README 和发布文档中的版本号。
 
 ## 已知边界
 

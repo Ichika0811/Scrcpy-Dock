@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.2.9
+
+- 修复 Windows 任务管理器显示 `Scrcpy Dock 鈥?multi-terminal scrcpy manager` 的问题。
+- 可执行文件描述统一为 `Scrcpy Dock`。
+- 增加 ADB 设备列表轮询兜底：连续未发现当前设备时自动标记断连。
+- 单实例名改为固定值，并为配置写入增加 Windows 文件锁，避免多版本同时写配置。
+- scrcpy 版本下载增加进度显示、取消和失败清理。
+- 全端口扫描改为分批提交，支持取消，避免一次性创建大量探测任务。
+- 新增终端日志自动清理：按保留天数和总大小限制，启动时执行。
+- 终端标签颜色不再限制 8 个；“所有终端”改为可搜索切换器，并支持 `Ctrl+1` 到 `Ctrl+9`。
+- 新增版本号同步脚本，构建前自动同步版本信息、README 和发布文档。
+- 将后台任务运行器从主窗口拆分到 `app/ui/tasks.py`。
+
 ## 1.2.8
 
 - 识别 scrcpy 输出中的 `Device disconnected`、`Could not send keep alive`、`device offline` 等断连日志，立即标记“设备已断开”并清理残留进程，无需先点终止即可重连。
